@@ -1,0 +1,753 @@
+---
+title: "Lab 4"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(gradethis)
+library(kableExtra)
+library(learnr)
+library(readr)
+
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+```
+
+## Goals
+
+Your goal is practice Always, Sometimes, Never questions for your upcoming test, as well as the rules of probability and using different probability distributions. 
+
+## Part 1: Loading Packages
+
+No new libraries today!
+
+## Part 2: Reading in Data
+
+No data to read in today!
+
+## Part 3: Test Review
+
+### Always, Sometimes, Never
+
+On the upcoming test, there will be a section of "Always, Sometimes, Never" questions--these are similar to True/False questions, but there are three options rather than two. 
+
+You will be given a statement, which is always, sometimes, or never true. Your job is to select the correct option, depending on the truth of the statement. These questions can be quite difficult, so let's talk about some strategy!
+
+First, consider whether the statement is generally true (Always) or false (Never). You can do this by testing the statement and eliminating one option. 
+
+```{r ASN1, echo = F}
+question("A continuous variable is a numeric variable.",
+  answer("Always (True)", correct = TRUE),
+  answer("Never (False)"),
+  allow_retry = T
+)
+```
+
+In the case of this statement, it is true that all continuous variables are numeric, by definition! So we would mark the statement as generally true. Then, once we choose a general direction, try to find an example *and* a counter example. Can you think of an example of a continuous variable that is numeric? What about a continuous variable that is not numeric?  
+
+It really does not make sense to have a continuous variable that is not numeric. By definition, a continuous variable is *a numerical variable* taking any real value--so we have justified our final answer of "Always". 
+
+Now, try a new statement. 
+
+```{r ASN2, echo = F}
+question("A numeric variable is a continuous variable.",
+  answer("Always (True)"),
+  answer("Never (False)"),
+  answer("Neither", correct = TRUE),
+  allow_retry = T
+)
+```
+
+Is this generally true, or generally false? What are your examples and counter examples?
+
+Hopefully, you can easily think of an example, such as blood pressure or body temperature. However, I hope that you can just as easily come up with a counter example, such as the number of teeth a person has! This statement is sometimes true, but not always--numeric variables can also be discrete. What is your answer now?
+
+```{r ASN3}
+question("A numeric variable is a continuous variable.",
+  answer("Always"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+When finding examples and counter examples, make sure to consider any unusual cases! If you are able to find both an example that makes the statement true and an example that makes the statement false, choose "Sometimes". 
+
+Another helpful hint is to try and clarify *exactly* when the statement is always or never true. For instance, consider the following:
+
+```{r ASN4, echo=FALSE}
+question("For two events $A$ and $B$ with $P(A)$ and $P(B)$, $P(A \\text{ and } B) = 0$.",
+  answer("Always"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+This statement is sometimes true--why? 
+
+```{r ASN5, echo=FALSE}
+question("What do we call two events that can never occur together?",
+  answer("Mutually Exclusive/Disjoint", correct = TRUE),
+  answer("Independent"),
+  answer("Dependent"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+In this case, a pair of mutually exclusive events, $A$ and $B$, results in $P(A \text{ and } B) = 0$. However, you should also be able to think of a counter-example, where $P(A \text{ and } B) = P(A) \times P(B)$.
+
+```{r ASN6, echo=FALSE}
+question("What do we call two events where the probability of events happening together is $P(A \\text{ and } B) = P(A) \\times P(B)$?",
+  answer("Mutually Exclusive/Disjoint"),
+  answer("Independent", correct = TRUE),
+  answer("Dependent"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Here, independent events serve as your counter example! So you can rewrite the statement to say either "For two **MUTUALLY EXCLUSIVE** events $A$ and $B$ with $P(A)$ and $P(B)$, $P(A \text{ and } B) = 0$", which is always true, or "For two **INDEPENDENT** events $A$ and $B$ with $P(A)$ and $P(B)$, $P(A \text{ and } B) = 0$", which is false (as long as $P(A)$ and $P(B)$ are both non-zero). Thus, this statement is sometimes true. 
+
+Practice these other Always, Sometimes, Never questions with your group. Talk about how you arrived at each answer. 
+
+```{r ASN7, echo=FALSE}
+question("$X$ and $Y$ are two variables with correlation of 0.98. $\\; X$ causes $Y$.",
+  answer("Always", message = "Correlation does not imply causation!!"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never", message = "Correlation does not necessarily imply causation, but it could--we need more research to know for sure!"),
+  allow_retry = T
+)
+```
+
+```{r ASN8, echo=FALSE}
+question("Parameters are characteristics of a population.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes"),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+$X$ | 0 | 1 | 2 | 3
+----|---|---|---|---
+$P(X)$ | 0.25 | 0.75 | 0.15 | $P(3)$
+
+```{r ASN9, echo=FALSE}
+question("The above table contains a valid probability distribution.",
+  answer("Always"),
+  answer("Sometimes"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN10, echo=FALSE}
+question("In a right-skewed dataset, the mean will be greater than the median.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes"),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+```{r ASN11, echo=FALSE}
+question("If $A$ and $B$ are independent with non-zero probabilities, $P(A \\text{ and } B) = 0$. ",
+  answer("Always", message = "$A$ and $B$ are independent, not mutually exclusive!"),
+  answer("Sometimes"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN12, echo=FALSE}
+question("Two variables $X$ and $Y$ have a correlation near 0. $\\; X$ and $Y$ have no relationship.",
+  answer("Always", message = "$X$ and $Y$ could have a nonlinear relationship!"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+```{r ASN13, echo=FALSE}
+question("A nominal variable is a numeric variable. ",
+  answer("Always", message = "By definition, a nominal variable is a categorical variable."),
+  answer("Sometimes", message = "By definition, a nominal variable is a categorical variable."),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN14, echo=FALSE}
+question("A dataset with two prominent peaks is known as bimodal.",
+  answer("Always", message = "What about a multimodal dataset, which has at least two peaks?"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+```{r ASN15, echo=FALSE}
+question("The residual for a point below the line of best fit is negative.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes"),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+```{r ASN16, echo=FALSE}
+question("The mean will be affected by an unusually large value, if one is present in the dataset.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes"),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+### Vocabulary Review
+
+Suppose I work at a pumpkin patch and would like to know what type of fertilizer (nitrogen-rich, phosphorous-rich, or potassium-rich) to use in order to grow the heaviest pumpkins possible (measured in pounds). Label each description with the appropriate vocabulary words, which may be used once, more than once, or not at all. 
+
+```{r vocab1, echo=FALSE}
+question("I survey randomly selected farms to find out what type of fertilizer is used and the average weights of their pumpkins.",
+  answer("Observational Study", correct = TRUE),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab2, echo=FALSE}
+question("The weight of the pumpkin, measured in pounds.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable", correct = TRUE),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab3, echo=FALSE}
+question("The types of fertilizer (nitrogen-rich, phosphorous-rich, potassium-rich).",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r vocab4, echo=FALSE}
+question("A friend of mine tells me that they have had very good luck growing large pumpkins with phoshorous-rich fertilizer applied immediately after blossoms appear on the plants.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence", correct = TRUE),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab5, echo=FALSE}
+question("The amount of fertilizer applied to the pumpkin patch.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable", correct = TRUE), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab6, echo=FALSE}
+question("I split my field into four plots, and randomly assign a different type of fertilizer to the pumpkins growing in each plot. The last plot has no fertilizer applied to it. After the growing season, I measure the size of the pumpkins grown (in pounds).",
+  answer("Observational Study"),
+  answer("Experiment", correct = TRUE),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab7, echo=FALSE}
+question("When in the growth period the fertilizer is applied to the pumpkin patch.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable", correct = TRUE), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab8, echo=FALSE}
+question("The last plot, which has no fertilizer applied to it.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group", correct = TRUE), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab9, echo=FALSE}
+question("The type of fertilizer.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence"),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable", correct = TRUE), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+```{r vocab10, echo=FALSE}
+question("The local gardening supply store recommends that I use potassium-rich fertilizer.",
+  answer("Observational Study"),
+  answer("Experiment"),
+  answer("Anecdotal Evidence", correct = TRUE),
+  answer("Control Group"), 
+  answer("Treatment Group"), 
+  answer("Placebo"), 
+  answer("Explanatory Variable"), 
+  answer("Response Variable"),
+  answer("Lurking Variable"), 
+  answer("Double-Blind"), 
+  answer("Open Label"), 
+  answer("Levels"),
+  allow_retry = T
+)
+```
+
+### Sampling Review
+
+Halloween is coming up, and I am already planning a sampling scheme to estimate the average amount of sugar consumed (in grams) per piece of Halloween candy from a trick-or-treater's stash. Choose the sampling scheme I am using in each scenario--the schemes may be used once, more than once, or not at all.  
+
+```{r sampling1, echo=FALSE}
+question("I follow the trick-or-treater on a pre-determined route, and in randomly selected blocks within the neighborhood, I record the grams of sugar in each piece of candy he is given.",
+  answer("Simple Random Sampling"),
+  answer("Stratified Sampling"),
+  answer("Cluster Sampling", correct = TRUE),
+  answer("Multistage Sampling"), 
+  answer("Convenience Sampling"),
+  allow_retry = T
+)
+```
+
+```{r sampling2, echo=FALSE}
+question("I grab a handful of candy from the top of the bag they used to store their stash and record the grams of sugar in each piece.",
+  answer("Simple Random Sampling"),
+  answer("Stratified Sampling"),
+  answer("Cluster Sampling"),
+  answer("Multistage Sampling"), 
+  answer("Convenience Sampling", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r sampling3, echo=FALSE}
+question("I label every piece of candy with a unique number from 1 to $n$. I randomly select 20 numbers, find the corresponding pieces of candy, and record the grams of sugar in each piece.",
+  answer("Simple Random Sampling", correct = TRUE),
+  answer("Stratified Sampling"),
+  answer("Cluster Sampling"),
+  answer("Multistage Sampling"), 
+  answer("Convenience Sampling"),
+  allow_retry = T
+)
+```
+
+```{r sampling4, echo=FALSE}
+question("I sort the candy into categories--chocolate-based, fruit-based, and other. Then I sample within each category according to their representation in the entire population and record the grams of sugar in each piece.",
+  answer("Simple Random Sampling"),
+  answer("Stratified Sampling", correct = TRUE),
+  answer("Cluster Sampling"),
+  answer("Multistage Sampling"), 
+  answer("Convenience Sampling"),
+  allow_retry = T
+)
+```
+
+```{r sampling5, echo=FALSE}
+question("I follow the trick-or-treater on a pre-determined route, and in randomly selected blocks within the neighborhood, I randomly select a house. After visiting the house, I record the grams of sugar in each piece of candy he is given.",
+  answer("Simple Random Sampling"),
+  answer("Stratified Sampling"),
+  answer("Cluster Sampling"),
+  answer("Multistage Sampling", correct = TRUE), 
+  answer("Convenience Sampling"),
+  allow_retry = T
+)
+```
+
+## Part 4: Probability Practice
+
+### Auditing
+
+In order to verify the accuracy of their financial accounts, companies use auditors on a regular basis to verify accounting entries. The company's employees make erroneous entries 5\% of the time. Suppose that an auditor randomly checks three entries. 
+
+Let's walk through finding the probability distribution for $Y$, the number of errors detected by the auditor--that is, find $P(0), P(1), P(2),$ and $P(3)$.
+
+We know that there are four elements in the sample space--$S = \{ 0, 1, 2, 3\}$.
+
+Find $P(0)$. 
+
+```{r audit1, exercise = TRUE}
+
+```
+
+```{r audit1-solution, message = FALSE, warning = FALSE}
+0.95^3
+```
+
+```{r audit1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 0.95^3))
+})
+```
+
+Now, find $P(1)$. Note that there are three ways to find one error--on the first, second, or third entry. 
+
+```{r audit2, exercise = TRUE}
+
+```
+
+```{r audit2-solution, message = FALSE, warning = FALSE}
+0.05*0.95*0.95 + 0.95*0.05*0.95 + 0.95*0.95*0.05
+```
+
+```{r audit2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 0.05*0.95*0.95 + 0.95*0.05*0.95 + 0.95*0.95*0.05))
+})
+```
+
+Now, find $P(2)$ (think about how many ways there are to find 2 errors!). 
+
+```{r audit3, exercise = TRUE}
+
+```
+
+```{r audit3-solution, message = FALSE, warning = FALSE}
+0.05*0.05*0.95 + 0.05*0.95*0.05 + 0.95*0.05*0.05
+```
+
+```{r audit3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 0.05*0.05*0.95 + 0.05*0.95*0.05 + 0.95*0.05*0.05))
+})
+```
+
+Now, find $P(3)$. 
+
+```{r audit4, exercise = TRUE}
+
+```
+
+```{r audit4-solution, message = FALSE, warning = FALSE}
+0.05^3
+```
+
+```{r audit4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 0.05^3))
+})
+```
+
+What is the probability that the auditor will detect more than one error?
+
+```{r audit5, exercise = TRUE}
+
+```
+
+```{r audit5-solution, message = FALSE, warning = FALSE}
+0.05*0.05*0.95 + 0.05*0.95*0.05 + 0.95*0.05*0.05 + 0.05^3
+```
+
+```{r audit5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 0.05*0.05*0.95 + 0.05*0.95*0.05 + 0.95*0.05*0.05 + 0.05^3))
+})
+```
+
+### Vote by Mail 
+
+In the 2020 election, the residents of Amherst, MA voted as follows:
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+(This table is repeated for every question so you won't have to scroll up and down).
+
+What is the probability that a randomly chosen Amherst voter voted for the GOP Candidate? 
+
+```{r election1, exercise = TRUE}
+
+```
+
+```{r election1-solution, message = FALSE, warning = FALSE}
+849/11083
+```
+
+```{r election1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 849/11083))
+})
+```
+
+What is the probability that randomly chosen Amherst voter voted by mail or early?
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+```{r election2, exercise = TRUE}
+
+```
+
+```{r election2-solution, message = FALSE, warning = FALSE}
+6002/11083
+```
+
+```{r election2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 6002/11083))
+})
+```
+
+What is the probability that a randomly chosen Amherst voter voted in person on the day of the election and voted for the Democrat candidate?
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+```{r election3, exercise = TRUE}
+
+```
+
+```{r election3-solution, message = FALSE, warning = FALSE}
+4554/11083
+```
+
+```{r election3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 4554/11083))
+})
+```
+
+What is the probability that a randomly chosen Amherst voter voted in person on the day of the election and by mail?
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+```{r election35, exercise = TRUE}
+
+```
+
+```{r election35-solution, message = FALSE, warning = FALSE}
+0
+```
+
+```{r election35-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 0))
+})
+```
+
+If I were to select a sealed envelope containing a ballot, sent in by mail, what is the probability that it is a vote for the Democrat candidate?
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+```{r election4, exercise = TRUE}
+
+```
+
+```{r election4-solution, message = FALSE, warning = FALSE}
+5680/6002
+```
+
+```{r election4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 5680/6002))
+})
+```
+
+What is the probability that a voter votes in person, given that they are voting for the GOP candidate?
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+```{r election5, exercise = TRUE}
+
+```
+
+```{r election5-solution, message = FALSE, warning = FALSE}
+527/849
+```
+
+```{r election5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 527/849))
+})
+```
+
+Are voting in person on the day of the election and voting for the Democrat candidate independent events? How can you tell?
+
+```{r}
+vote_table <- data.frame(rbind(
+                    c(322, 527, 849), 
+                    c(5680, 4554, 10234), 
+                    c(6002, 5081, 11083)))
+
+colnames(vote_table) <- c("By Mail/Early", "In Person/Day of", "Total")
+rownames(vote_table) <- c("GOP Candidate", "Dem Candidate", "Total")
+
+kable(vote_table, align = c("r", "r", "r"), format = "html") %>%
+  kable_styling(bootstrap_options = c("bordered"))
+```
+
+```{r election6, exercise = TRUE}
+
+```
+
+```{r election6-solution, message = FALSE, warning = FALSE}
+(5081/11083)*(10234/11083)
+```
+
+```{r election6-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, (5081/11083)*(10234/11083)))
+})
+```
+
+Since $P(Dem \text{ and } Vote \; Day \; of) \neq P(Dem) \times P(Vote \; Day \; of)$ (from an earlier question), no, these events are not independent.

@@ -1,0 +1,907 @@
+---
+title: "Lab 12"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(readr)
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+
+mtcars <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/mtcars.csv", stringsAsFactors = TRUE)
+gasprice <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/quantreg/gasprice.csv")
+
+year <- c(1963, 1974, 1981, 1982, 1984, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000)
+pairs <- c(417, 791, 1188, 1480, 1757, 1875, 2238, 2475, 2680, 3035, 3399, 3749, 4015, 4449, 4712, 5094, 5295, 5748, 6104, 6471)
+eagles <- data.frame(Year = year, Pairs = pairs)
+
+HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
+
+HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
+
+mult8 <- seq(from = 8, to = 96, by = 8)
+
+hillraces <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/DAAG/hills.csv")
+```
+
+## Goals
+
+Your goal is to practice using the `lm()` command for linear regression, as well as the associated code (including creating residual plots).
+
+## Part 1: Loading Packages
+
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `ggplot2`.  Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+
+```{r loadpackages, exercise = T}
+library(ggplot2)
+```
+
+## Part 2: Reading in Data
+
+Today, we will be using several different datasets to explore different types of relationships. We've actually already seen them-- `mtcars`, `gasprice`, `HousePrices`, plus a small dataset that I entered manually, `eagles`. There is an additional new dataset, `hillraces`. 
+
+```{r data, exercise = TRUE}
+mtcars <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/mtcars.csv", stringsAsFactors = TRUE)
+gasprice <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/quantreg/gasprice.csv")
+HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
+glimpse(eagles)
+hillraces <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/DAAG/hills.csv")
+```
+
+We will be using the `HousePrices` dataframe the most--it describes house prices in Windsor, Canada, as well as some related variables. There are many variables in this dataset--read more at the [dataset documentation](https://vincentarelbundock.github.io/Rdatasets/doc/AER/HousePrices.html).  
+
+<div id="data-hint">
+**Hint:** Note the extra `stringsAsFactors` argument--this needs to be included to make some of our code work correctly!!
+</div>
+
+## Part 3: Residual Plots
+
+### `mtcars`
+
+The `mtcars` dataset includes data on fuel consumption and other aspects of 32 cars from a 1974 issue of *Motor Trends* magazine [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/datasets/mtcars.html). We are specifically interested in how the weight of the car (`wt`) might impact the car's displacement, which can be thought of as the size of the engine (`disp`).
+
+Recreate a scatterplot displaying the relationship between weight and displacement. 
+
+```{r mtcars, exercise = TRUE}
+ggplot(data = mtcars, aes(x = , y = )) +
+  geom_point()
+```
+
+```{r mtcars-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(data = mtcars, aes(x = wt, y = disp)) +
+  geom_point()
+```
+
+```{r mtcars-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Refresh your memories--describe this relationship in terms of its form, direction, strength, and unusual values. Is a linear relationship appropriate for describing weight and displacement? If not, what type of relationship might be more appropriate?
+
+```{r mtcars2, echo=FALSE}
+question("Which of the following describe the relationship between weight and engine displacement? Select all that apply.",
+  answer("Linear"),
+  answer("Non-Linear", correct = TRUE),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate"),
+  answer("Strong", correct = TRUE),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r mtcars25, echo=FALSE}
+question("What is the correct formula for predicting `disp` from `wt`?",
+  answer("`disp ~ wt`", correct = TRUE),
+  answer("`wt ~ disp`"),
+  answer("`. ~ wt`"),
+  answer("`disp ~ .`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Now, fit a model predicting `disp` from `wt`--save it as `m_mtcars`.
+
+```{r mtcars3, exercise = TRUE}
+m_mtcars <- lm(data = mtcars, formula = disp ~ )
+```
+
+```{r mtcars3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_mtcars <- lm(data = mtcars, formula = disp ~ wt)
+```
+
+```{r mtcars3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using `m_mtcars`, create the residual plot. What patterns do you see in the data?
+
+```{r prepare-mtcars, message = FALSE}
+m_mtcars <- lm(data = mtcars, formula = disp ~ wt)
+```
+
+```{r mtcars4, exercise = TRUE, exercise.setup = "prepare-mtcars"}
+ggplot(data = , aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r mtcars4-solution}
+ggplot(data = m_mtcars, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r mtcars4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+This relationship is actually quadratic. You can see that the residuals at the ends are positive, and the residuals in the middle are negative. 
+
+### `gasprice`
+
+The `gasprice` dataset includes data on gas prices in the United States, collected once per week from 1990 to 2003 [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/quantreg/gasprice.html).
+
+Recreate a scatterplot displaying the relationship between time (`time`) and gas price (`value`).
+
+```{r gasprice, exercise = TRUE}
+ggplot(data = , aes()) +
+  geom_point()
+```
+
+```{r gasprice-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(gasprice, aes(x = time, y = value)) +
+  geom_point()
+```
+
+```{r gasprice-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r gasprice2, echo=FALSE}
+question("Which of the following describe the relationship between gas prices and time? Select all that apply.",
+  answer("Linear"),
+  answer("Non-Linear", correct = TRUE),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate"),
+  answer("Strong", correct = TRUE),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r gasprice25, echo=FALSE}
+question("What is the correct formula for predicting `value` from `time`?",
+  answer("`value ~ time`", correct = TRUE),
+  answer("`time ~ value`"),
+  answer("`gasprice ~ time`"),
+  answer("`time ~ gasprice`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Now, fit a model predicting `value` from `time`--save it as `m_gasprice`.
+
+```{r gasprice3, exercise = TRUE}
+m_gasprice <- lm(data = , formula =  )
+```
+
+```{r gasprice3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_gasprice <- lm(data = gasprice, formula = value ~ time)
+```
+
+```{r gasprice3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using `m_gasprice`, create the residual plot. What patterns do you see in the data?
+
+```{r prepare-gasprice, message = FALSE}
+m_gasprice <- lm(data = gasprice, formula = value ~ time)
+```
+
+```{r gasprice4, exercise = TRUE, exercise.setup = "prepare-gasprice"}
+ggplot(data = , aes(x = , y = )) +
+  geom_point()
+```
+
+```{r gasprice4-solution}
+ggplot(data = m_gasprice, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r gasprice4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+This type of graph is indicative that you are working with a time series. When picking datasets to work with for your final project, do NOT choose a dataset that looks like this!
+
+### `eagles`
+
+The `eagles` dataset contains information the [number of mating pairs of bald eagles in the United States](https://courses.lumenlearning.com/wmopen-concepts-statistics/chapter/exponential-relationships-1-of-6/). In 1967, bald eagles officially became an endangered species, and in 1972, the use of DDT (a pesticide causing damage to the shells of the eagle eggs) was banned--scientists have been tracking the population ever since.
+Recreate a scatterplot displaying the relationship between time (`Year`) and the number of mating pairs (`Pairs`).
+
+```{r eagles1, exercise = TRUE}
+ggplot() +
+  geom_point()
+```
+
+```{r eagles1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(eagles, aes(x = Year, y = Pairs)) +
+  geom_point()
+```
+
+```{r eagles1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r eagles2, echo=FALSE}
+question("Which of the following describe the relationship between mating pairs of eagles and year? Select all that apply.",
+  answer("Linear"),
+  answer("Non-Linear", correct = TRUE),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate"),
+  answer("Strong", correct = TRUE),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r eagles25, echo=FALSE}
+question("What is the correct formula for predicting `Pairs` from `Year`?",
+  answer("`Pairs ~ Year`", correct = TRUE),
+  answer("`Year ~ Pairs`"),
+  answer("`. ~ Year`"),
+  answer("`Year ~ .`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Now, fit a model predicting `Pairs` from `Year`--save it as `m_eagles`.
+
+```{r eagles3, exercise = TRUE}
+m_eagles <- lm()
+```
+
+```{r eagles3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_eagles <- lm(data = eagles, formula = Pairs ~ Year)
+```
+
+```{r eagles3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using `m_eagles`, create the residual plot. What patterns do you see in the data?
+
+```{r prepare-eagles, message = FALSE}
+m_eagles <- lm(data = eagles, formula = Pairs ~ Year)
+```
+
+```{r eagles4, exercise = TRUE, exercise.setup = "prepare-eagles"}
+ggplot() +
+  geom_point()
+```
+
+```{r eagles4-solution}
+ggplot(data = m_eagles, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r eagles4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+As it turns out, the relationship between year and number of mating pairs is best described with an exponential relationship, not a straight line! In addition, it's MUCH easier to see with the residual plot!
+
+### `HousePrices`
+
+The `HousePrices` dataset is another real estate dataset, containing information on sales prices of houses sold in Windsor, Canada, during July, August, and September of 1987 ([documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/HousePrices.html)). The dataset also includes information on many other characteristics, including `aircon` (whether the house had air conditioning) and `driveway` (whether the house had a driveway). Don't forget, between the `glimpse()`, `colnames()`, and `?` function, you should be able to read about each variable!
+
+Recreate a scatterplot displaying the relationship between lot size, in square feet (`lotsize`) and the price of the house (`price`).
+
+```{r windsor1, exercise = TRUE}
+ggplot()
+
+```
+
+```{r windsor1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point()
+```
+
+```{r windsor1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r windsor2, echo=FALSE}
+question("Which of the following describe the relationship between mating pairs of lot size and price? Select all that apply.",
+  answer("Linear", correct = TRUE),
+  answer("Non-Linear"),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate", correct = TRUE),
+  answer("Strong"),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r windsor25, echo=FALSE}
+question("What is the correct formula for predicting `price` from `lotsize`?",
+  answer("`price ~ lotsize`", correct = TRUE),
+  answer("`lotsize ~ price`"),
+  answer("`HousePrices ~ lotsize`"),
+  answer("`HousePrices ~ price`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Now, fit a model predicting `price` from `lotsize`--save it as `m_windsor`.
+
+```{r windsor3, exercise = TRUE}
+m_eagles <- lm()
+```
+
+```{r windsor3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_windsor <- lm(data = HousePrices, formula = price ~ lotsize)
+```
+
+```{r windsor3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using `m_windsor`, create the residual plot. What patterns do you see in the data?
+
+```{r prepare-windsor, message = FALSE}
+m_windsor <- lm(data = HousePrices, formula = price ~ lotsize)
+```
+
+```{r windsor4, exercise = TRUE, exercise.setup = "prepare-windsor"}
+
+```
+
+```{r windsor4-solution}
+ggplot(data = m_windsor, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r windsor4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+This is actually an example of non-constant variance! Money variables are often very right-skewed and can contribute to the problem. To fix this, we are actually going to use the `log()` transform for the rest of the lab. Fit a new `m_windsor` using the code chunk below. 
+
+```{r windsor5, exercise = TRUE}
+m_windsor <- lm(data = HousePrices, formula = log(price) ~ lotsize)
+```
+
+Now refit the residual plot. Does this look better?
+
+```{r prepare-windsor2, message = FALSE}
+m_windsor <- lm(data = HousePrices, formula = log(price) ~ lotsize)
+```
+
+```{r windsor55, exercise = TRUE, exercise.setup = "prepare-windsor2"}
+
+```
+
+```{r windsor55-solution}
+ggplot(data = m_windsor, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r windsor55-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+## Part 4: Investigating Slopes and Intercepts
+
+We have already fit the linear regression model. What are the values of $b_0$ and $b_1$? 
+
+```{r equation, exercise = TRUE, exercise.setup = "prepare-windsor2"}
+
+```
+
+```{r equation-solution}
+m_windsor
+```
+
+```{r equation-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Write the equation of the line after you find these values. How would you interpret the slope? How would you interpret the intercept? Does it make sense to interpret the intercept? Why or why not?
+
+### Tests on the Slope
+
+Run a test to see if $\beta_1 = 0$. Is there evidence of a difference? Make sure you and your group can run the full test!
+
+```{r slopetest, exercise = TRUE, exercise.setup = "prepare-windsor2"}
+
+```
+
+```{r slopetest-solution}
+summary(m_windsor)
+```
+
+```{r slopetest-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="slopetest-hint">
+**Hint:** Remember that the default output of `summary()` returns a hypothesis test for $\beta_0$ and $\beta_1$ individually being equal to 0. 
+</div>
+
+## Part 5: Outliers
+
+Before we start the next problem, let's do some preliminary data exploration. 
+
+### Logical Operators
+
+At times it is useful to evaluate the truth of a statement in R--we will encounter one of these times in a minute! These statements usually involve logical operators, such as greater than (`>`) or less than (`>`). 
+
+Write a line of code to confirm that seven is greater than five. 
+
+```{r greaterthan, exercise = TRUE}
+
+```
+
+```{r greaterthan-solution, message = FALSE, warning = FALSE, echo = FALSE, eval = FALSE}
+7 > 5
+```
+
+```{r greaterthan-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r 4_1, echo=FALSE, eval = F}
+question("What is the output?",
+  answer("TRUE", correct = TRUE),
+  answer("FALSE"),
+  answer("0"),
+  answer("1"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Write a line of code to confirm that eight is NOT greater than eleven. 
+
+```{r lessthan, exercise = TRUE}
+
+```
+
+```{r lessthan-solution, message = FALSE, warning = FALSE, echo = FALSE}
+8 > 11
+```
+
+```{r lessthan-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r 4_2, echo=FALSE, eval = F}
+question("What is the output?",
+  answer("TRUE"),
+  answer("FALSE", correct = TRUE),
+  answer("0"),
+  answer("1"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Other logical operators include equal to `==`, less than or equal to `<=`, and greater than or equal to `>=`. Write a line of code to confirm that the square root of sixteen is 4. 
+
+```{r equalto, exercise = TRUE}
+
+```
+
+```{r equalto-solution, message = FALSE, warning = FALSE, echo = FALSE}
+sqrt(16) == 4
+```
+
+```{r equalto-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="residualplot1-hint">
+**Hint:** Be careful to use TWO equal signs. 
+</div>
+
+Finally, we may be interested in values that are **not** equal to other values. 
+
+See if you can find the R symbol representing "not equal to" by searching for it online. Write a line of code to confirm that the square root of 81 is not equal to 4. 
+
+```{r notequalto, exercise = TRUE}
+
+```
+
+```{r notequalto-solution, message = FALSE, warning = FALSE, echo = FALSE}
+sqrt(81) != 4
+```
+
+```{r notequalto-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+All of these logical operators (`>`, `<`, `==`, `>=`, `<=`, `!=`, among others!) produce the Boolean values `TRUE` and `FALSE` (or `T` and `F`). You have actually seen these values before, in some of the functions we have used. These values are not numbers, but they are sometimes treated as numeric. 
+
+Write some code using the basic arithmetic operations and `TRUE` and `FALSE`. 
+
+```{r truefalse, exercise = TRUE}
+
+```
+
+```{r 4_5, echo=FALSE}
+question("Which number is `TRUE` is treated as, and which number is `FALSE` is treated as? This is a guess, so try as much as you need!",
+  answer("`TRUE` is treated as a `100`, and `FALSE` is treated as a `-100`."),
+  answer("`TRUE` is treated as a `1`, and `FALSE` is treated as a `0`.", correct = TRUE),
+  answer("`TRUE` is treated as a `100`, and `FALSE` is treated as a `0`."),
+  answer("`TRUE` is treated as a `1`, and `FALSE` is treated as a `-100`."),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Logical operators in R are vectorized, just as the arithmetic operators. This means that you can store several values in a vector and test each of them against a logical operator.
+
+The line of code beginning with `mult8` generates a vector of multiples of 8 between 8 and 96. Test all elements to see which are multiples of 3 using the line of code `mult8 %% 3 == 0`. 
+
+```{r booleanvec, exercise = TRUE}
+mult8 <- seq(from = 8, to = 96, by = 8)
+```
+
+```{r booleanvec-solution, message = FALSE, warning = FALSE, echo = FALSE}
+mult8 <- seq(from = 8, to = 96, by = 8)
+mult8 %% 3 == 0
+```
+
+```{r booleanvec-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r 4_6, echo=FALSE}
+question("How many responses (`TRUE` or `FALSE`) does R give you?",
+  answer("There are 12 responses total (1 for each element)--eight are `TRUE` and four are `FALSE`."),
+  answer("There are 12 responses total (1 for each element)--four are `TRUE` and eight are `FALSE`.", correct = TRUE),
+  answer("There is 1 response (for the entire vector)--since not all of the elements are multiples of three, the answer is `FALSE`.", message = "There should be `12 responses!"),
+  answer("There is 1 response (for the entire vector)--since at least one of the elements is a multiple of three, the answer is `TRUE`.", message = "There should be `12 responses!"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+We could count the number of `TRUE` values manually, but that can be time-consuming and error-prone. Instead, we can apply the `sum()` function to the code containing the logical operator `==` to count for us--remember, `TRUE` is treated as 1 and `FALSE` is treated as 0. Write a line of code to confirm that there are four multiples of 8 that are divisible by three between 8 and 96.
+
+```{r booleansum, exercise = TRUE}
+
+```
+
+```{r booleansum-solution, message = FALSE, warning = FALSE, echo = FALSE}
+sum(mult8 %% 3 == 0)
+```
+
+```{r booleansum-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We know that there are four multiples of 8 that are divisible by three--but which ones? The `which()` function will return the positions of the elements of `mult8` that are divisible by 3. 
+
+```{r which, exercise = TRUE}
+which()
+```
+
+```{r which-solution, message = FALSE, warning = FALSE, echo = FALSE}
+which(mult8 %% 3 == 0)
+```
+
+```{r which-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You can see that the $3^{rd}$, $6^{th}$, $9^{th}$, and $12^{th}$ elements are divisible by three (which makes sense, given the way that we constructed it). You can combine `which()` with a logical operator to get the positions of elements that satisfy that condition. Practice using `which()` below. 
+
+Generate a sequence going from 0 to 100 by steps of 4 (named `mult4`). Find out which values are divisible by 7.
+
+```{r which2, exercise = TRUE}
+mult4 <- seq()
+which()
+```
+
+```{r which2-solution, message = FALSE, warning = FALSE, echo = FALSE}
+mult4 <- seq(from = 0, to = 100, by = 4)
+which(mult4 %% 7 == 0)
+```
+
+```{r which2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Generate a sample of 30 values from the Standard Normal Distribution named `norm30` using `rnorm()`. Find out which are greater than 2. 
+
+```{r which3, exercise = TRUE}
+norm30 <- 
+which()
+```
+
+```{r which3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+norm30 <- rnorm(30, mean = 0, sd = 1) 
+which(norm30 > 2)
+```
+
+```{r which3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Find out which of the houses in `HousePrices` have central AC. 
+
+```{r which4, exercise = TRUE}
+which()
+```
+
+```{r which4-solution, message = FALSE, warning = FALSE, echo = FALSE}
+which(HousePrices$aircon == "yes")
+```
+
+```{r which4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Square Brackets
+
+Every so often, you've seen me use the dollar sign (`$`) in R to pull out a column of a data frame. The dollar sign only works if you know the names of the columns. R can also extract rows, columns, or elements of a data frame using the square brackets (`[]`). This type of extraction is based on the positions. 
+
+To extract a single element, you place the row index, a comma, and the column index inside the square brackets, which follow the name of the data frame (`dataframe[row, column]`). For example, you would code `HousePrices[300, 10]` to extract the element in the $300^{th}$ row and the $10^{th}$ column. 
+
+Change the following line of code to extract the element in the $120^{th}$ row and the $5^{th}$ column.
+
+```{r sqbrackets, exercise = TRUE}
+HousePrices[300, 10]
+```
+
+```{r sqbrackets-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices[120, 5]
+```
+
+```{r sqbrackets-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r 2_5}
+question("What is the value in the $120^{th}$ row and the $5^{th}$ column?",
+  answer("`1`", correct = TRUE),
+  answer("`NULL`", message = "It looks like you have your indices flipped!"),
+  answer("`no`", message = "Don't forget to change the values!"),
+  answer("None of the above", message = "Keep trying!"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+You can also extract a whole row! Continue using the square brackets--however, leave the column index out. Extract the $412^{th}$ row from the `Boston` data frame.  
+
+```{r rindex, exercise = TRUE}
+
+```
+
+```{r rindex-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices[412,]
+```
+
+```{r rindex-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+To extract a column, you use the square brackets but leave the row index out. Extract the $8^{th}$ column from the `HousePrices` data frame. 
+
+```{r cindex, exercise = TRUE}
+
+```
+
+```{r cindex-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices[,8]
+```
+
+```{r cindex-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Note that this is the same as `HousePrices$recreation`--if we had known the name, we could have extracted it automatically! The difference between the dollar sign operator and the square brackets is like the difference between putting in "Mount Holyoke College" and "50 College Street, South Hadley, MA 01075" into your GPS. One requires you to know the name, and the other requires you to know the exact location.
+
+### Scottish Hill Races
+
+The `hillraces` dataset describes data from 35 Scottish hill races in 1984.
+
+Let's test out some multiple linear regression! Fit a model predicting the completion time of the race (`time`) from the distance of the race (`dist`) AND the amount a participant needs to climn (`climb`) --save it as `m_hillraces`. Make sure you know how to write the equation for the model. 
+
+```{r hillraces1, exercise = TRUE}
+m_hillraces <- 
+```
+
+```{r hillraces1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_hillraces <- lm(data = hillraces, time ~ dist + climb)
+```
+
+```{r hillraces1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is `dist` a significant predictor of time? 
+
+```{r prepare-hillraces, message = FALSE}
+m_hillraces <- lm(data = hillraces, time ~ dist + climb)
+```
+
+```{r hillraces2, exercise = TRUE, exercise.setup = "prepare-hillraces"}
+
+```
+
+```{r hillraces2-solution, message = FALSE, warning = FALSE, echo = FALSE}
+summary(m_hillraces)
+```
+
+```{r hillraces2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+What is the $r^2$ for the model?
+
+```{r hillraces3, exercise = TRUE, exercise.setup = "prepare-hillraces"}
+
+```
+
+```{r hillraces3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+summary(m_hillraces)$r.squared
+```
+
+```{r hillraces3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Create a plot of the residuals for each observation. Is there any evidence that any of the observations are outliers? 
+
+```{r hillraces4, exercise = TRUE, exercise.setup = "prepare-hillraces"}
+
+```
+
+```{r hillraces4-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(data = m_hillraces, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r hillraces4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+There are two points that I might be concerned about. One near (0.23, 1.1), and one near (2.9, 0.55). Identify which rows contain the outliers using the `which()` function.
+
+```{r hillraces5, exercise = TRUE, exercise.setup = "prepare-hillraces"}
+which()
+```
+
+```{r hillraces5-solution, message = FALSE, warning = FALSE, echo = FALSE}
+which(m_hillraces$residuals > 0.4)
+```
+
+```{r hillraces5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="hillraces-hint">
+**Hint:** Use a logical operator to see which of `m_hillraces$residuals` is greater than 0.4.
+</div>
+
+Remove row 18 using the code chunk below, then, refit the model. Name it `m_hillraces2`.
+
+```{r hillraces6, exercise = TRUE, exercise.setup = "prepare-hillraces"}
+hillraces_18 <- hillraces[-18,]
+```
+
+```{r prepare-hillraces2, message = FALSE}
+hillraces_18 <- hillraces[-18,]
+```
+
+```{r hillraces7, exercise = TRUE, exercise.setup = "prepare-hillraces2"}
+m_hillraces2 <-
+```
+
+```{r hillraces7-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_hillraces2 <- lm(data = hillraces_18, time ~ dist + climb)
+```
+
+```{r hillraces7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now what is the $r^2$?
+
+```{r prepare-hillraces3, message = FALSE}
+hillraces_18 <- hillraces[-18,]
+m_hillraces2 <- lm(data = hillraces_18, time ~ dist + climb)
+```
+
+```{r hillraces8, exercise = TRUE, exercise.setup = "prepare-hillraces3"}
+m_hillraces2 <-
+```
+
+```{r hillraces8-solution, message = FALSE, warning = FALSE, echo = FALSE}
+summary(m_hillraces2)$r.squared
+```
+
+```{r hillraces8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+It turns out that observation 18, Knock Hill, should be recorded as 18 minutes (0.3) instead of 78 minutes, which is what it is now. Using the code below, fit a new model--name it `m_hillraces3`.
+
+```{r hillraces9, exercise = TRUE, exercise.setup = "prepare-hillraces4"}
+hillraces$time[18] <- 0.3
+```
+
+```{r prepare-hillraces4, message = FALSE}
+hillraces$time[18] <- 0.3
+```
+
+```{r hillraces10, exercise = TRUE, exercise.setup = "prepare-hillraces4"}
+m_hillraces3 <-
+```
+
+```{r hillraces10-solution, message = FALSE, warning = FALSE, echo = FALSE}
+m_hillraces3 <- lm(data = hillraces, time ~ dist + climb)
+```
+
+```{r hillraces10-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Recreate the residuals plot. Does this look more appropriate?
+
+```{r prepare-hillraces5, message = FALSE}
+hillraces$time[18] <- 0.3
+m_hillraces3 <- lm(data = hillraces, time ~ dist + climb)
+```
+
+```{r hillraces11, exercise = TRUE, exercise.setup = "prepare-hillraces5"}
+
+```
+
+```{r hillraces11-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(data = m_hillraces3, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r hillraces11-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Re-run the hypothesis test. Is `dist` still a significant predictor?
+
+```{r hillraces12, exercise = TRUE, exercise.setup = "prepare-hillraces5"}
+
+```
+
+```{r hillraces12-solution, message = FALSE, warning = FALSE, echo = FALSE}
+summary(m_hillraces3)
+```
+
+```{r hillraces12-check, message = FALSE, warning = FALSE}
+grade_code()
+```

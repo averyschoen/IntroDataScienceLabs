@@ -1,0 +1,593 @@
+---
+title: "Lab 3"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(gradethis)
+library(learnr)
+library(readr)
+
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+
+library(ggplot2)
+library(MASS)
+library(tidyverse)
+
+mtcars <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/mtcars.csv", stringsAsFactors = TRUE)
+gasprice <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/quantreg/gasprice.csv")
+
+year <- c(1963, 1974, 1981, 1982, 1984, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000)
+pairs <- c(417, 791, 1188, 1480, 1757, 1875, 2238, 2475, 2680, 3035, 3399, 3749, 4015, 4449, 4712, 5094, 5295, 5748, 6104, 6471)
+eagles <- data.frame(Year = year, Pairs = pairs)
+
+HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
+
+model1 <- lm(data = HousePrices, price ~ lotsize)
+
+b0 <- 34136.192
+b1 <- 6.599
+
+newdata <- data.frame(lotsize = 6325)
+```
+
+## Goals
+
+Your goal is practice creating scatterplots with `ggplot2`, as well as the calculations associated with correlation and regression.
+
+## Part 1: Loading Packages
+
+Packages are loaded with the `library()` command, as below. For this lab, we will continue using `ggplot2`. Go ahead and run this code chunk now.
+
+```{r loadpackages, exercise = T}
+library(ggplot2)
+```
+
+Again, packages need to be loaded EVERY time you want to use them! If you are getting errors like "could not find function", it is likely because you forgot to load a package. I usually write the lines of code required to load a package at the top of the R script so they are loaded and ready to use when I need them. 
+
+## Part 2: Reading in Data
+
+We now have learned how to read files from a local machine and how to use datasets contained in packages. The last way to read in data is from a website.
+
+Today, we will be using several different datasets to explore different types of relationships. There are three datasets included below (`mtcars`, `gasprice`, `HousePrices`), plus a small dataset that I entered manually (`eagles`).  
+
+```{r data, exercise = TRUE}
+mtcars <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/mtcars.csv", stringsAsFactors = TRUE)
+gasprice <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/quantreg/gasprice.csv")
+HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
+glimpse(eagles)
+```
+
+## Part 3: Describing Relationships
+
+### `mtcars`
+
+The `mtcars` dataset includes data on fuel consumption and other aspects of 32 cars from a 1974 issue of *Motor Trends* magazine [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/datasets/mtcars.html). We are specifically interested in how the weight of the car (`wt`) might impact the car's displacement, which can be thought of as the size of the engine (`disp`).
+
+Create a scatterplot displaying the relationship between weight and displacement. Notice that unlike the other plots we have created, such as histograms and densities, you have to supply an `x` and a `y` aesthetic. Remember that $x$ is traditionally the explanatory variable and $y$ is traditionally the response.
+
+```{r mtcars, exercise = TRUE}
+ggplot(data = mtcars, aes(x = , y = )) +
+  geom_point()
+```
+
+```{r mtcars-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(data = mtcars, aes(x = wt, y = disp)) +
+  geom_point()
+```
+
+```{r mtcars-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Describe this relationship in terms of its form, direction, strength, and unusual values. Is a linear relationship appropriate for describing weight and displacement? If not, what type of relationship might be more appropriate?
+
+```{r mtcars2, echo=FALSE}
+question("Which of the following describe the relationship between weight and engine displacement? Note that the correlation between the variables is 0.888. Select all that apply.",
+  answer("Linear", correct = TRUE),
+  answer("Non-Linear"),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate"),
+  answer("Strong", correct = TRUE),
+  answer("Unusual Values", correct = TRUE),
+  answer("No Unusual Values"),
+  allow_retry = T
+)
+```
+
+### `gasprice`
+
+The `gasprice` dataset includes data on gas prices in the United States, collected once per week from 1990 to 2003 [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/quantreg/gasprice.html).
+
+Create a scatterplot displaying the relationship between time (`time`) and gas price (`value`).
+
+```{r gasprice, exercise = TRUE}
+ggplot(data = , aes()) +
+  geom_point()
+```
+
+```{r gasprice-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(gasprice, aes(x = time, y = value)) +
+  geom_point()
+```
+
+```{r gasprice-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r gasprice2, echo=FALSE}
+question("Which of the following describe the relationship between gas prices and time? Note that the correlation between the variables is 0.664. Select all that apply.",
+  answer("Linear"),
+  answer("Non-Linear", correct = TRUE),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate"),
+  answer("Strong", correct = TRUE),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T
+)
+```
+
+### `eagles`
+
+The `eagles` dataset contains information the number of mating pairs of bald eagles in the United States. In 1967, bald eagles officially became an endangered species, and in 1972, the use of DDT (a pesticide causing damage to the shells of the eagle eggs) was banned--scientists have been tracking the population since (<https://courses.lumenlearning.com/wmopen-concepts-statistics/chapter/exponential-relationships-1-of-6/>).
+Create a scatterplot displaying the relationship between time (`Year`) and the number of mating pairs (`Pairs`).
+
+```{r eagles1, exercise = TRUE}
+ggplot() +
+  geom_point()
+```
+
+```{r eagles1-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(eagles, aes(x = Year, y = Pairs)) +
+  geom_point()
+```
+
+```{r eagles1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r eagles2, echo=FALSE}
+question("Which of the following describe the relationship between mating pairs of eagles and year? Note that the correlation between the variables is 0.914. Select all that apply.",
+  answer("Linear", correct = TRUE),
+  answer("Non-Linear"),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate"),
+  answer("Strong", correct = TRUE),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T
+)
+```
+
+Now confirm the value of the correlation between `Year` and `Pairs`. In class, we learned how to use what is called base R syntax to calculate the correlation. Below, I've written some basic `tidyverse` syntax--this way eliminates the confusing dollar signs.
+
+```{r eagles3, exercise = TRUE}
+eagles %>%
+  summarize(cor(Year, Pairs))
+```
+
+As it turns out, the relationship between year and number of mating pairs is best described with an exponential relationship, not a straight line! However, we can see that the correlation is very strong--if we looked at $R$ alone, we might think that this data has a very strong linear relationship. This is why it is important to consider both the plot and the correlation at the same time!
+
+### `HousePrices`
+
+The `HousePrices` dataset is another real estate dataset, containing information on sales prices of houses sold in Windsor, Canada, during July, August, and September of 1987 [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/HousePrices.html). The dataset also includes information on many other characteristics, including `aircon` (whether the house had air conditioning) and `driveway` (whether the house had a driveway). Don't forget, between the `glimpse()`, `colnames()`, and `?` function, you should be able to read about each variable!
+
+Create a scatterplot displaying the relationship between lot size, in square feet (`lotsize`) and the price of the house (`price`).
+
+```{r windsor1, exercise = TRUE}
+ggplot()
+
+```
+
+```{r windsor1-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point()
+```
+
+```{r windsor1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r windsor2, echo=FALSE}
+question("Which of the following describe the relationship between mating pairs of lot size and price? Note that the correlation between the variables is 0.536. Select all that apply.",
+  answer("Linear", correct = TRUE),
+  answer("Non-Linear"),
+  answer("Negative"),
+  answer("Positive", correct = TRUE),
+  answer("Weak"),
+  answer("Moderate", correct = TRUE),
+  answer("Strong"),
+  answer("Unusual Values"),
+  answer("No Unusual Values", correct = TRUE),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+## Part 4: Linear Regression
+
+To practice the R skills associated with linear regression, we will continue using the `HousePrices` dataset.
+
+First, calculate the mean and standard deviation for the `lotsize` and `price` variables (remember, it is generally good practice to report the summaries of your variables to your audience). What types of variables are we working with?
+
+```{r lr1, exercise = TRUE}
+HousePrices %>%
+  summarize()
+```
+
+```{r lr1-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices %>%
+  summarize(mean(lotsize), sd(lotsize), mean(price), sd(price))
+```
+
+```{r lr1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, calculate the correlation between `lotsize` and `price` using `tidyverse` syntax. Does this appear to be a strong relationship?
+
+```{r lr2, exercise = TRUE}
+HousePrices %>%
+  summarize(cor())
+```
+
+```{r lr2-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices %>%
+  summarize(cor(lotsize, price))
+```
+
+```{r lr2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Suppose we wanted to treat `price` as the explanatory variable, and `lotsize` as the response. What happens if you switch the places of the two variables? Use `tidyverse` syntax.
+
+```{r lr3, exercise = TRUE}
+HousePrices %>%
+  summarize()
+```
+
+```{r lr3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices %>%
+  summarize(cor(price, lotsize))
+```
+
+```{r lr3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+If you switch the places, nothing happens! The correlation of the two variables is the same no matter which is treated as the explanatory variable, $X$, and which is treated as the response variable, $Y$.
+
+Now suppose we wanted to list the lot sizes of the house in square yards instead of square feet. To do this, we can divide `lotsize` by 9. What is the correlation between the lot size in square yards and house price? Use `tidyverse` syntax.
+
+```{r lr4, exercise = TRUE}
+HousePrices %>%
+
+```
+
+```{r lr4-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+HousePrices %>%
+  summarize(cor(lotsize/9, price))
+```
+
+```{r lr4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Again, nothing happens! This is because correlation is *unitless*--it does not depend on the units of either of the variables.
+
+Instead of doing the calculations manually, we are going to fit a linear model describing the relationship between lot size and price.
+
+```{r formula, echo=FALSE}
+question("What is the correct formula for describing this relationship, assuming that the explanatory variable is lot size?",
+  answer("`price ~ lotsize`", correct = TRUE),
+  answer("`lotsize ~ price`", message = "The explanatory variable goes on the right side!"),
+  answer("`aircon ~ lotsize`"),
+  answer("`price ~ aircon`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Using the `lm()` command, fit a linear model predicting price from lot size. Save the model as `model1`.
+
+```{r lr5, exercise = TRUE}
+model1 <- lm()
+```
+
+```{r lr5-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+model1 <- lm(data = HousePrices, price ~ lotsize)
+```
+
+```{r lr5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+To print the value in your saved object, type in the saved object's name.
+
+```{r lr6, exercise = TRUE}
+
+```
+
+```{r lr6-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+model1
+```
+
+```{r lr6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, store the intercept and slope as `b0` and `b1`, respectively.
+
+```{r lr7, exercise = TRUE}
+
+```
+
+```{r lr7-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+b0 <- 34136.192
+b1 <- 6.599
+```
+
+```{r lr7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using the `b0` and `b1` values, predict the price of a house with a lot size of 4,300 square feet.
+
+```{r lr8, exercise = TRUE}
+
+```
+
+```{r lr8-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+b0 + b1*4300
+```
+
+```{r lr8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+There are other ways to predict values that will come in handy later in this class. One of these ways is shown below--first, we create a dataframe called `newdata` that defines the lot size. Then, we plug `newdata` into the predict function, along side the model we want to use (in this case, `model1`).
+
+Experiment with this new method--can you also get the prediction of price for a house with a lot size of 6,325 square feet?
+
+```{r lr9, exercise = TRUE}
+newdata <- data.frame(lotsize = 4300)
+predict(model1, newdata = newdata)
+```
+
+```{r lr9-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+newdata <- data.frame(lotsize = 6325)
+predict(model1, newdata = newdata)
+```
+
+```{r lr9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+It turns out that there is a 6,325 square foot lot size in the dataset. It sold for $106,000. What is the residual of this observation?
+
+```{r lr10, exercise = TRUE}
+
+```
+
+```{r lr10-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+106000 - predict(model1, newdata = newdata)
+```
+
+```{r lr10-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r residual, echo=FALSE, eval = F}
+question("Based on this number, is this point above or below the line?",
+  answer("Above", correct = TRUE),
+  answer("Below", message = "The residual is positive, not negative!"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+```{r slopeinterpretation, echo=FALSE, eval = F}
+question("What is the correct interpretation of the slope?",
+  answer("For every increase of one square foot, we expect the price to increase by $6.60.", correct = TRUE),
+  answer("For every increase of one square foot, we expect the price to increase by $34,136.19."),
+  answer("For every increase of one dollar, we expect the lot size to increase by $6.60."),
+  answer("When lot size is zero, we expect a house to cost $34,136.19."),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+```{r intinterpretation, echo=FALSE, eval = F}
+question("What is the correct interpretation of the intercept?",
+  answer("For every increase of one square foot, we expect the price to increase by $6.60.", correct = TRUE),
+  answer("When a house costs $0, we expect the lot size to be 34,136 square feet."),
+  answer("When lot size is zero, we expect a house to cost $6.60."),
+  answer("When lot size is zero, we expect a house to cost $34,136.19.", correct = TRUE),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+## Part 5: `ggplot2`
+
+Let's learn a few more tricks in `ggplot2`. You might be interested in adding the linear model to the scatterplot. You can do this by using `geom_abline()` and specifying the `slope` and `intercept` (don't forget, you saved these as `b1` and `b0` before!).
+
+```{r ggplot1, exercise = TRUE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point() +
+  geom_abline(slope = , intercept = )
+```
+
+```{r ggplot1-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point() +
+  geom_abline(slope = b1, intercept = b0)
+```
+
+```{r ggplot1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+In the future, you won't have to calculate the slope and intercept before adding them to the graph--you can also ask `ggplot` to carry out the calculations for you directly by using `geom_smooth()`. Add `geom_smooth()` to the plot.
+
+```{r ggplot2, exercise = TRUE}
+
+```
+
+```{r ggplot2-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r ggplot2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Does this look like you expect? There are many ways to model data, and it turns out that `ggplot2` does not use linear relationships as the default. We need to add the argument `method = "lm"` to the `geom_smooth()` function.
+
+```{r ggplot3, exercise = TRUE}
+
+```
+
+```{r ggplot3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r ggplot3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Much better! However, there is one more thing--do you see the small gray ribbon underneath the line? We don't need this on our graph (we aren't going to learn about it in this class, and I think it adds clutter rather than insight). We can remove it by adding another argument, `se = FALSE`, to `geom_smooth()` (don't forget, multiple arguments should be separated by commas).
+
+```{r ggplot4, exercise = TRUE}
+
+```
+
+```{r ggplot4-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r ggplot4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Very nice! You may also wish to clean up your graph, including by making nicer $x$- and $y$-axis labels. You can do this by adding `xlab()` and `ylab()` to your plot. Inside the parentheses, you supply an expression for the labels inside a set of quotation marks. I have chosen `"Lot Size (square feet)"` and `"Price (1987 Dollars)"`.
+
+```{r ggplot5, exercise = TRUE}
+
+```
+
+```{r ggplot5-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  xlab("Lot Size (square feet)") +
+  ylab("Price (1987 Dollars)")
+```
+
+```{r ggplot5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Last week, we learned how to change the colors of the different plots using the ggplot2 color guide. You may also be interested in color coding the points on your graph using other variables from your dataset! In this case, create a scatterplot showing the relationship between `lotsize` and `price`, but color the points according to `aircon`--whether or not the house has an air conditioner. You can do this by adding the argument `color = aircon` to the aesthetics statement (`aes()` function).
+
+```{r ggplot6, exercise = TRUE}
+
+```
+
+```{r ggplot6-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price, color = aircon)) +
+  geom_point() +
+  xlab("Lot Size (square feet)") +
+  ylab("Price (1987 Dollars)")
+```
+
+```{r ggplot6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+In addition to changing color, you can change the shape of the points--the most commonly used options can be found [in this guide to point shapes](https://blog.albertkuo.me/post/point-shape-options-in-ggplot/). Try changing the points to a different shape (I used the asterisk, option 8)--you can do this by adding the shape argument to `geom_point()` directly.
+
+```{r ggplot7, exercise = TRUE}
+
+```
+
+```{r ggplot7-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price, color = aircon)) +
+  geom_point(shape = 8) +
+  xlab("Lot Size (square feet)") +
+  ylab("Price (1987 Dollars)")
+```
+
+```{r ggplot7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You can also change the shape of the points to correspond to other variables. You can do this by adding the argument `shape` to the aesthetics statement. Change the shape of the points in this graph to represent whether or not the house has a driveway.
+
+```{r ggplot8, exercise = TRUE}
+
+```
+
+```{r ggplot8-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price, color = aircon, shape = driveway)) +
+  geom_point() +
+  xlab("Lot Size (square feet)") +
+  ylab("Price (1987 Dollars)")
+```
+
+```{r ggplot8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You can also change the size of the points, by adding a `size` argument to the aesthetics statement. Try changing the size of the points to 2.
+
+```{r ggplot9, exercise = TRUE}
+
+```
+
+```{r ggplot9-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price, color = aircon, shape = driveway, size = 2)) +
+  geom_point() +
+  xlab("Lot Size (square feet)") +
+  ylab("Price (1987 Dollars)")
+```
+
+```{r ggplot9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Your points should all be bigger! Finally, just like with `shape` and `color`, `size` can be changed to correspond with a variable. Change the size to match the number of bathrooms in a house (`bathrooms`).
+
+```{r ggplot10, exercise = TRUE}
+
+```
+
+```{r ggplot10-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(HousePrices, aes(x = lotsize, y = price, color = aircon, shape = driveway, size = bathrooms)) +
+  geom_point() +
+  xlab("Lot Size (square feet)") +
+  ylab("Price (1987 Dollars)")
+```
+
+```{r ggplot10-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+That is all for today! If you are done early, you and your group can try changing the color scheme of your plots by checking out this [guide to color palettes](r-statistics.co/Complete-Ggplot2-Tutorial-Part1-With-R-Code.html)--search the page for "palette" to find the relevant part of the tutorial easily.

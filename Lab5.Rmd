@@ -1,0 +1,503 @@
+---
+title: "Lab 5"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(gradethis)
+library(learnr)
+library(readr)
+
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+```
+
+## Goals
+
+Your goal is practice Always, Sometimes, Never questions for your upcoming test, as well as the rules of probability and using different probability distributions. 
+
+## Part 1: Loading Packages
+
+No new libraries today!
+
+## Part 2: Reading in Data
+
+No data to read in today!
+
+## Part 3: Probability Distributions
+
+When practicing these questions, make sure you are asking yourself what distribution you should be using!
+
+### Cake Batter
+
+The yield of a box of cake mix is normally distributed with a mean of 4.75 cups of batter and a standard deviation of 0.25 cups. 
+
+Write this distribution in mathematical notation. 
+
+```{r cakebatter1, echo=FALSE}
+question("Write this distribution in mathematical notation.",
+  answer("$N(4.75, 0.25)$", correct = TRUE),
+  answer("$N(0.25, 4.75)$"),
+  answer("$N(0, 1)$"),
+  answer("$N(1, 0)$"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Calculate the Z-score for a box of cake mix yielding 5.2 cups of batter. 
+
+```{r cakebatter2, exercise = TRUE}
+
+```
+
+```{r cakebatter2-solution, message = FALSE, warning = FALSE}
+(5.2-4.75)/0.25
+```
+
+```{r cakebatter2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, (5.2-4.75)/0.25))
+})
+```
+
+```{r cakebatter3, echo=FALSE}
+question("Interpret the Z-score.",
+  answer("The Z-score is 1.8 standard deviations above the mean.", correct = TRUE),
+  answer("The Z-score is 1.8 standard deviations below the mean."),
+  answer("The Z-score is 1.8 standard deviations away from the mean.", message = "There is a more precise answer!"),
+  answer("95% of points should be within 1.8 standard deviations of the mean."),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+What is the probability that a box of cake mix yields less than 4.15 cups of batter?
+
+```{r cakebatter4, exercise = TRUE}
+pnorm()
+```
+
+```{r cakebatter4-solution, message = FALSE, warning = FALSE}
+pnorm(4.15, mean = 4.75, sd = 0.25)
+```
+
+```{r cakebatter4-check, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(4.15, mean = 4.75, sd = 0.25)))
+})
+```
+
+What is the probability that the box of cake mix yielded more than 5.2 cups of batter? 
+
+```{r cakebatter5, exercise = TRUE}
+
+```
+
+```{r cakebatter5-solution, warning = FALSE}
+1 - pnorm(5.2, mean = 4.75, sd = 0.25)
+```
+
+```{r cakebatter5-check}
+grade_result({
+  pass_if(~ all.equal(.result, 1 - pnorm(5.2, mean = 4.75, sd = 0.25)))
+})
+```
+
+What is the probability that the box of cake mix yields between 4.25 and 4.85 cups of batter?
+
+```{r cakebatter6, exercise = TRUE}
+
+```
+
+```{r cakebatter6-solution, message = FALSE, warning = FALSE}
+pnorm(4.85, mean = 4.75, sd = 0.25) - pnorm(4.25, mean = 4.75, sd = 0.25)
+```
+
+```{r cakebatter6-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(4.85, mean = 4.75, sd = 0.25) - pnorm(4.25, mean = 4.75, sd = 0.25)))
+})
+```
+
+### Coffee Drinkers
+
+A 2017 study shows that 64\% of Americans drink coffee every day.
+
+In a group of 14 people, how many are expected to drink coffee every day? \textcolor{red}{Hint: what distribution should you be using to answer this question?}
+
+```{r coffee1, exercise = TRUE}
+
+```
+
+```{r coffee1-solution, message = FALSE, warning = FALSE}
+14*0.64
+```
+
+```{r coffee1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 14*0.64))
+})
+```
+
+In the same group of 14 Americans, what is the probability that exactly 9 drink coffee every day?
+
+```{r coffee2, exercise = TRUE}
+
+```
+
+```{r coffee2-solution, message = FALSE, warning = FALSE}
+dbinom(9, size = 14, prob = 0.64)
+```
+
+```{r coffee2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dbinom(9, size = 14, prob = 0.64)))
+})
+```
+
+What is the probability that at least ten drink coffee every day?
+
+```{r coffee3, exercise = TRUE}
+
+```
+
+```{r coffee3-solution, message = FALSE, warning = FALSE}
+1 - pbinom(9, size = 14, prob = 0.64)
+```
+
+```{r coffee3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1 - pbinom(9, size = 14, prob = 0.64)))
+})
+```
+
+What is the probability that at most 7 drink coffee every day?
+
+```{r coffee4, exercise = TRUE}
+
+```
+
+```{r coffee4-solution, message = FALSE, warning = FALSE}
+pbinom(7, size = 14, prob = 0.64)
+```
+
+```{r coffee4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pbinom(7, size = 14, prob = 0.64)))
+})
+```
+
+What is the probability that between 3 and 8 drink coffee every day?
+
+```{r coffee5, exercise = TRUE}
+
+```
+
+```{r coffee5-solution, message = FALSE, warning = FALSE}
+pbinom(8, size = 14, prob = 0.64) - pbinom(2, size = 14, prob = 0.64)
+```
+
+```{r coffee5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pbinom(8, size = 14, prob = 0.64) - pbinom(2, size = 14, prob = 0.64)))
+})
+```
+
+### Dogs in Apartments
+
+In a certain apartment complex, residents are allowed to have dogs. The rate of dogs in the apartment complex is 4 per building. 
+
+```{r dogs1, echo=FALSE, eval = F}
+question("How many dogs should I expect to be living in a building?",
+  answer("4", correct = TRUE),
+  answer("16"),
+  answer("2"),
+  answer("0")
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+What is the probability that a building has at least one dog?
+
+```{r dogs2, exercise = TRUE}
+
+```
+
+```{r dogs2-solution, message = FALSE, warning = FALSE}
+1 - ppois(0, lambda = 4)
+```
+
+```{r dogs2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1 - ppois(0, lambda = 4)))
+})
+```
+
+What is the probability that a building has exactly five dogs?
+
+```{r dogs3, exercise = TRUE}
+
+```
+
+```{r dogs3-solution, message = FALSE, warning = FALSE}
+dpois(5, lambda = 4)
+```
+
+```{r dogs3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dpois(5, lambda = 4)))
+})
+```
+
+What is the probability that a building has no more than 3 dogs?
+
+```{r dogs4, exercise = TRUE}
+
+```
+
+```{r dogs4-solution, message = FALSE, warning = FALSE}
+ppois(3, lambda = 4)
+```
+
+```{r dogs4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, ppois(3, lambda = 4)))
+})
+```
+
+### Freethrows
+
+Assume that a basketball player has a 76.3\% chance of making a free throw. How many free throws should we expect her to shoot before making one? 
+
+```{r freethrows1, exercise = TRUE}
+
+```
+
+```{r freethrows1-solution, message = FALSE, warning = FALSE}
+1/0.763
+```
+
+```{r freethrows1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1/0.763))
+})
+```
+
+What is the probability that she makes her first free throw on her third shot?
+
+```{r freethrows2, exercise = TRUE}
+
+```
+
+```{r freethrows2-solution, message = FALSE, warning = FALSE}
+dgeom(2, prob = 0.763)
+```
+
+```{r freethrows2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dgeom(2, prob = 0.763)))
+})
+```
+
+<div id="freethrows2-hint">
+**Hint:** Don't forget! `dgeom()` requires the number of failures, not the total number of trials. 
+</div>
+
+What is the probability that she makes her first free throw some time after her third shot?
+
+```{r freethrows3, exercise = TRUE}
+
+```
+
+```{r freethrows3-solution, message = FALSE, warning = FALSE}
+1 - pgeom(2, prob = 0.763) 
+```
+
+```{r freethrows3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1 - pgeom(2, prob = 0.763)))
+})
+```
+
+What is the probability that it takes her no more than two shots to make her first free throw?
+
+```{r freethrows4, exercise = TRUE}
+
+```
+
+```{r freethrows4-solution, message = FALSE, warning = FALSE}
+pgeom(1, prob = 0.763)
+```
+
+```{r freethrows4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pgeom(1, prob = 0.763)))
+})
+```
+
+### Bookworms
+
+One in four Americans did not read a single book last year. 
+
+What is the probability, $p$, that a randomly chosen American did not read a single book last year?
+
+```{r books1, exercise = TRUE}
+
+```
+
+```{r books1-solution, message = FALSE, warning = FALSE}
+1/4
+```
+
+```{r books1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1/4))
+})
+```
+
+In a group of 24 Americans, how many are expected to have not read a single book last year?
+
+```{r books2, exercise = TRUE}
+
+```
+
+```{r books2-solution, message = FALSE, warning = FALSE}
+24*0.25
+```
+
+```{r books2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 24*0.25))
+})
+```
+
+When meeting a group of new people (all Americans), what is the probability that I meet the first person who did not read a single book last year during my fifth meeting?
+
+```{r books3, exercise = TRUE}
+
+```
+
+```{r books3-solution, message = FALSE, warning = FALSE}
+dgeom(4, prob = 0.25)
+```
+
+```{r books3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dgeom(4, prob = 0.25)))
+})
+```
+
+How many Americans should I expect to meet before meeting one who did not read a single book last year?
+
+```{r books4, exercise = TRUE}
+
+```
+
+```{r books4-solution, message = FALSE, warning = FALSE}
+1/0.25
+```
+
+```{r books4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1/0.25))
+})
+```
+
+In a group of 10 people, what is the probability that exactly three did not read a single book last year?
+
+```{r books5, exercise = TRUE}
+
+```
+
+```{r books5-solution, message = FALSE, warning = FALSE}
+dbinom(3, size = 10, prob = 0.25)
+```
+
+```{r books5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dbinom(3, size = 10, prob = 0.25)))
+})
+```
+
+In a group of 19 people, what is the probability that no more than 3 people did not read a single book last year?
+
+```{r books6, exercise = TRUE}
+
+```
+
+```{r books6-solution, message = FALSE, warning = FALSE}
+pbinom(3, size = 19, prob = 0.25)
+```
+
+```{r books6-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pbinom(3, size = 19, prob = 0.25)))
+})
+```
+
+### San Antonio Spurs
+
+In the 2019-2020 NBA season prior to the break, the San Antonio Spurs scored an average of 28.25 points per quarter (4 quarters of 12 minutes each per one game). Let $S$ be a random variable describing the number of points scored in a quarter.
+
+```{r spurs1, echo=FALSE, eval = F}
+question("What distribution is most appropriate to use to calculate the probability of scoring more than 32 points in a quarter?",
+  answer("Poisson", correct = TRUE),
+  answer("Binomial"),
+  answer("Geometric"),
+  answer("Bernoulli"), 
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+What are the expected value and the standard deviation of this distribution? Save them as `exp_val` and `sd`.
+
+```{r spurs2, exercise = TRUE}
+exp_val <- 
+sd <-
+```
+
+```{r spurs2-solution, message = FALSE, warning = FALSE}
+exp_val <- 28.25
+sd <- sqrt(28.25)
+```
+
+```{r spurs2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+What is the probability that the San Antonio Spurs scored more than 32 points in a quarter?
+
+```{r spurs3, exercise = TRUE}
+
+```
+
+```{r spurs3-solution, message = FALSE, warning = FALSE}
+1 - ppois(32, lambda = 28.25)
+```
+
+```{r spurs3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1 - ppois(32, lambda = 28.25)))
+})
+```
+
+What is the probability that the San Antonio Spurs score between 24 and 28 points in a quarter (including both 24 and 28)?
+
+```{r spurs4, exercise = TRUE}
+
+```
+
+```{r spurs4-solution, message = FALSE, warning = FALSE}
+sum(dpois(24:28, lambda = 28.25))
+```
+
+```{r spurs4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, sum(dpois(24:28, lambda = 28.25))))
+})
+```

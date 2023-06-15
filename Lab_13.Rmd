@@ -1,0 +1,753 @@
+---
+title: "Lab 13"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(readr)
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+
+CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv", stringsAsFactors = FALSE)
+
+NMES1998 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/NMES1988.csv", stringsAsFactors = TRUE)
+
+PSID1982 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/PSID1982.csv", stringsAsFactors = TRUE)
+```
+
+## Goals
+
+Your goal is to practice using the `lm()` command for linear regression, as well as the associated code (including creating residual plots). You will also be practicing incorporating categorical variables. 
+
+## Part 1: Loading Packages
+
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `ggplot2`. We will also load the `dplyr` package so we can use some data manipulation functions. Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+
+```{r loadpackages, exercise = T}
+library(dplyr)
+library(ggplot2)
+```
+
+## Part 2: Reading in Data
+
+Today, we will be using several different datasets to practice working with categorical variables and explore relationships using linear regression. These datasets, `CollegeDistance`, `NMES1998`, and `PSID1982`, are loaded below: 
+
+```{r data, exercise = TRUE}
+CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv")
+
+NMES1998 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/NMES1988.csv",
+                     stringsAsFactors = TRUE)
+
+PSID1982 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/PSID1982.csv",
+                     stringsAsFactors = TRUE)
+```
+
+<div id="data-hint">
+**Hint:** Note the extra `stringsAsFactors` argument--this needs to be included to make some of our code work correctly!!
+</div>
+
+## Part 3: Categorical Variables
+
+You may recall that categorical variables are often saved as factors in R. Let's practice working with them so that you are prepared to include them in a linear regression model for your project. 
+
+### `CollegeDistance`
+
+The `CollegeDistance` dataset includes data from a survey conducted by the US Department of Education in 1980 ([documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/CollegeDistance.html)). The survey includes students from about 1,100 high schools across the country.
+
+First, apply the `glimpse()` function to the dataset. 
+
+```{r collegedistance1, exercise = TRUE}
+
+```
+
+```{r collegedistance1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+glimpse(CollegeDistance)
+```
+
+```{r collegedistance1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r collegedistance2, echo=FALSE}
+question("Looking at this dataset, which of the variables appear to be categorical? Select all that apply.",
+  answer("`X`"),
+  answer("`gender`", correct = TRUE),
+  answer("`ethnicity`", correct = TRUE),
+  answer("`score`"),
+  answer("`fcollege`", correct = TRUE),
+  answer("`mcollege`", correct = TRUE),
+  answer("`home`", correct = TRUE),
+  answer("`urban`", correct = TRUE),
+  answer("`unemp`"),
+  answer("`wage`"),
+  answer("`distance`"),
+  answer("`tuition`"),
+  answer("`education`"),
+  answer("`income`", correct = TRUE),
+  answer("`region`", correct = TRUE),
+  allow_retry = T
+)
+```
+
+Take a closer look at the output from `glimpse()`. Do you see some gray output, in between the variable name and the values in the dataset? You may remember that this is a description of how the variable is saved in R. Even though we know that `gender`, `ethnicity`, `fcollege`, `mcollege`, `home`, `urban`, `income`, and `region` are categorical and therefore should be saved as factors (`<fct>`), all we can see is gray output indicating that they are all saved as character strings (`<chr>`). Character strings can be useful but are beyond the scope of this class--we need to know how to change the storage type of the variables!
+
+First, let's confirm what we already know--`fcollege`, which describes whether a student's father attended college, is NOT saved as a factor. We can do this using the `is.factor()` function. 
+
+```{r collegedistance3, exercise = TRUE}
+is.factor()
+```
+
+```{r collegedistance3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+is.factor(CollegeDistance$fcollege)
+```
+
+```{r collegedistance3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="collegedistance3-hint">
+**Hint:** Don't forget to use the dollar sign operator to look specifically at `fcollege` inside the `CollegeDistance` dataframe.
+</div>
+
+If you don't want to use `glimpse()`, you can check a particular factor with `is.factor()`. As we know, `fcollege` is not saved as a factor--but we can force it to be saved as a factor with `as.factor()`. 
+
+```{r collegedistance4, exercise = TRUE}
+CollegeDistance <- CollegeDistance %>%
+  mutate(fcollege = as.factor(fcollege))
+```
+
+This code resaves the CollegeDistance dataset with a "factor version" of `fcollege`. Double check that `fcollege` is now a factor with both the `glimpse()` and `is.factor()` functions. 
+
+```{r prepare-collegedistancea, message = FALSE}
+CollegeDistance <- CollegeDistance %>%
+  mutate(fcollege = as.factor(fcollege))
+```
+
+```{r collegedistance5, exercise = TRUE, exercise.setup = "prepare-collegedistancea"}
+glimpse()
+is.factor()
+```
+
+```{r collegedistance5-solution}
+glimpse(CollegeDistance)
+is.factor(CollegeDistance$fcollege)
+```
+
+```{r collegedistance5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Yay, it worked! But... all of the other categorical variables are still saved as character strings. You would have to change them all individually--or we can revisit the function we used to read the data in. 
+
+```{r collegedistance6, exercise = TRUE}
+CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv")
+```
+
+Let's add an argument, `stringsAsFactors = TRUE`, to the `read.csv()` function. This argument tells R to automatically treat any variable saved as a character string to be a factor instead! When you read your data in for the final project, make sure to include this argument. 
+
+```{r collegedistance7, exercise = TRUE}
+CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv",
+                            stringsAsFactors = TRUE)
+```
+
+Now apply the `glimpse()` function again. 
+
+```{r prepare-collegedistanceb, message = FALSE}
+CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv",
+                            stringsAsFactors = TRUE)
+```
+
+```{r collegedistance8, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+
+```
+
+```{r collegedistance8-solution}
+glimpse(CollegeDistance)
+```
+
+```{r collegedistance8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now we're ready to work with categorical variables. First, apply the `levels()` function to the variable `fcollege`. 
+
+```{r collegedistance9, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+levels()
+```
+
+```{r collegedistance9-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(CollegeDistance$fcollege)
+```
+
+```{r collegedistance9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="collegedistance9-hint">
+**Hint:** Don't forget to use the dollar sign operator to look specifically at `fcollege` inside the `CollegeDistance` dataframe.
+</div>
+
+Remember that the levels of a categorical variable are all of the possible values it can take. 
+
+```{r collegedistance10, echo=FALSE}
+question("What are the levels of `fcollege`? Select all that apply.",
+  answer("`male`"),
+  answer("`female`"),
+  answer("`no`", correct = TRUE),
+  answer("`yes`", correct = TRUE),
+  answer("`fcollege`"),
+  answer("`1`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Remember also that in simple linear regression, we need to know what the reference level is. There is no function in R to find the reference level, but you can revisit the `levels()` output--the value that comes first is the reference. 
+
+```{r collegedistance11, echo=FALSE}
+question("What is the reference level of `fcollege`?",
+  answer("`male`"),
+  answer("`female`"),
+  answer("`no`", correct = TRUE),
+  answer("`yes`"),
+  answer("`fcollege`"),
+  answer("`1`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Now look at the levels of `gender`. 
+
+```{r collegedistance12, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+levels()
+```
+
+```{r collegedistance12-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(CollegeDistance$gender)
+```
+
+```{r collegedistance12-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r collegedistance13, echo=FALSE}
+question("What is the reference level of `gender`?",
+  answer("`male`"),
+  answer("`female`", correct = TRUE),
+  answer("`no`"),
+  answer("`yes`"),
+  answer("`fcollege`"),
+  answer("`1`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Now look at the levels of `ethnicity`. 
+
+```{r collegedistance16, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+levels()
+```
+
+```{r collegedistance16-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(CollegeDistance$ethnicity)
+```
+
+```{r collegedistance16-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+This variable has three levels!! But the same rule of thumb for finding the reference level applies.
+
+```{r collegedistance17, echo=FALSE}
+question("What is the reference level of `ethnicity`?",
+  answer("`afam`", correct = TRUE),
+  answer("`hispanic`"),
+  answer("`other`"),
+  answer("`yes`"),
+  answer("`no`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Now look at the levels of `income`. 
+
+```{r collegedistance18, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+levels()
+```
+
+```{r collegedistance18-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(CollegeDistance$income)
+```
+
+```{r collegedistance18-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r collegedistance19, echo=FALSE}
+question("What is the reference level of `income`?",
+  answer("`afam`"),
+  answer("`hispanic`"),
+  answer("`other`"),
+  answer("`high`", correct = TRUE),
+  answer("`low`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Finally, look at the levels of `region`. 
+
+```{r collegedistance20, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+levels()
+```
+
+```{r collegedistance20-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(CollegeDistance$region)
+```
+
+```{r collegedistance20-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r collegedistance21, echo=FALSE}
+question("What is the reference level of `region`?",
+  answer("`afam`"),
+  answer("`hispanic`"),
+  answer("`other`", correct = TRUE),
+  answer("`west`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Maybe you noticed a trend in these answers--another helpful hint is that typically (although NOT ALWAYS), the reference level is the level that comes first either alphabetically ("o" for *other* comes before "w" for *west*), or numerically (which you might see in future datasets).
+
+### `NMES1998 `
+
+The `NMES1998 ` dataset includes data from the US National Medical Expenditure Survey (NMES) conducted in 1987 and 1988 [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/NMES1988.html). The survey includes data on individuals older than 66 covered by Medicare, a public insurance program for the elderly. 
+
+First, apply the `glimpse()` function to the dataset. 
+
+```{r NMES1, exercise = TRUE}
+
+```
+
+```{r NMES1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+glimpse(NMES1998)
+```
+
+```{r NMES1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r NMES2, echo=FALSE}
+question("Looking at this dataset, which of the variables appear to be categorical? Select all that apply.",
+  answer("`X`"),
+  answer("`visits`"),
+  answer("`nvisits`"),
+  answer("`ovisits`"),
+  answer("`novisits`"),
+  answer("`emergency`"),
+  answer("`hospital`"),
+  answer("`health`", correct = TRUE),
+  answer("`chronic`"),
+  answer("`adl`", correct = TRUE),
+  answer("`region`", correct = TRUE),
+  answer("`age`"),
+  answer("`afam`", correct = TRUE),
+  answer("`gender`", correct = TRUE),
+  answer("`married`", correct = TRUE),
+  answer("`school`"),
+  answer("`income`"),
+  answer("`employed`", correct = TRUE),
+  answer("`insurance`", correct = TRUE),
+  answer("`medicaid`", correct = TRUE),
+  allow_retry = T
+)
+```
+
+Notice that all of these are already saved as factors--because we preemptively used `stringsAsFactors = TRUE` in Part 2, when we loaded the data.
+
+First, apply the `levels()` function to the variable `nvisits`. 
+
+```{r NMES3, exercise = TRUE}
+levels()
+```
+
+```{r NMES3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(NMES1998$nvisits)
+```
+
+```{r NMES3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="NMES3-hint">
+**Hint:** Don't forget to use the dollar sign operator to look specifically at `nvisits` inside the `NMES1998` dataframe.
+</div>
+
+There are no levels here, because `nvisits` is not a categorical variable/factor! This is what you should expect to see if you apply `levels()` to a variable that isn't saved correctly.
+
+Now look at the levels of `health`. 
+
+```{r NMES4, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+levels()
+```
+
+```{r NMES4-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(NMES1998$health)
+```
+
+```{r NMES4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r NMES5, echo=FALSE}
+question("What is the reference level of `health`?",
+  answer("`excellent`"),
+  answer("`poor`"),
+  answer("`average`", correct = TRUE),
+  answer("`yes`"),
+  answer("`no`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+Here, we see an example where we might want to change the reference level. Sometimes, people like to save their reference level in a sort of order (remember, there are such thing as ordinal variables). Here, the levels of `health` are listed as `"average"`, `"excellent"`, and `"poor"`, but if we order them, it might look more like `"poor"`, `"average"`, and `"excellent"`. We won't work with ordered factors here, but to see how to change the reference level, see the following example:
+
+```{r NMES6, exercise = TRUE}
+NMES1998 <- NMES1998 %>%
+  mutate(health = relevel(health, ref = "poor"))
+
+levels(NMES1998$health)
+```
+
+Now look at the levels of `region``. 
+
+```{r NMES7, exercise = TRUE}
+levels()
+```
+
+```{r NMES7-solution, message = FALSE, warning = FALSE, echo = FALSE}
+levels(NMES1998$region)
+```
+
+```{r NMES7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r NMES8, echo=FALSE}
+question("What is the reference level of `region`?",
+  answer("`midwest`", correct = TRUE),
+  answer("`northeast`"),
+  answer("`other`"),
+  answer("`west`"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+
+
+
+## Part 4: Investigating Slopes and Intercepts
+
+The `PSID1982 ` dataset includes data from a panel study on Income Dynamics in 1982. [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/PSID1982.html). 
+
+First, apply the `glimpse()` function to the dataset. 
+
+```{r PSID1, exercise = TRUE}
+
+```
+
+```{r PSID1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+glimpse(PSID1982)
+```
+
+```{r PSID1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r PSID2, echo=FALSE}
+question("Looking at this dataset, which of the variables appear to be categorical? Select all that apply.",
+  answer("`X`"),
+  answer("`experience`"),
+  answer("`weeks`"),
+  answer("`occupation`", correct = TRUE),
+  answer("`industry`", correct = TRUE),
+  answer("`south`", correct = TRUE),
+  answer("`smsa`", correct = TRUE),
+  answer("`married`", correct = TRUE),
+  answer("`gender`", correct = TRUE),
+  answer("`union`", correct = TRUE),
+  answer("`education`"),
+  answer("`ethnicity`", correct = TRUE),
+  answer("`wage`"),
+  allow_retry = T
+)
+```
+
+Using `ggplot()`, create a scatterplot predicting `wage` from `experience`. 
+
+```{r PSID3, exercise = TRUE}
+
+```
+
+```{r PSID3-solution, message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(data = PSID1982, aes(x = experience, y = wage)) + 
+  geom_point()
+```
+
+```{r PSID3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Check out the point near $(22, 5100)$. 
+
+```{r PSID4, echo=FALSE}
+question("Is this point an outlier, high leverage, or influential?",
+  answer("Outlier", correct = TRUE),
+  answer("High Leverage", message = "The point is far away from the dataset, but not in the $x$-direction!"),
+  answer("Influential", message = "The point is far away from the dataset, but removing it is not likely to change anything about the line!"),
+  answer("None of the above"),
+  allow_retry = T
+)
+```
+
+```{r PSID5, echo=FALSE}
+question("Describe the scatter plot in terms of its form, direction, strength, and unusual values.",
+  answer("Linear", correct = TRUE),
+  answer("Nonlinear", message = "It can be described best by a flat line--but a flat line is still a line!"),
+  answer("Positive", correct = TRUE),
+  answer("Negative"),
+  answer("Strong"), 
+  answer("Moderate"), 
+  answer("Weak", correct = TRUE), 
+  answer("Unusual values", correct= TRUE), 
+  answer("No unusual values"),
+  allow_retry = T
+)
+```
+
+Now, fit a linear model `model1` predicting `wage` from `experience`.
+
+```{r PSID6, exercise = TRUE}
+model1
+```
+
+```{r PSID6-solution, message = FALSE, warning = FALSE, echo = FALSE}
+model1 <- lm(data = PSID1982, formula = wage ~ experience)
+```
+
+```{r PSID6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+View the summary of `model1`. 
+
+```{r prepare-PSIDa, message = FALSE}
+model1 <- lm(data = PSID1982, formula = wage ~ experience)
+```
+
+```{r PSID7, exercise = TRUE, exercise.setup = "prepare-PSIDa"}
+
+```
+
+```{r PSID7-solution}
+summary(model1)
+```
+
+```{r PSID7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r PSID8, echo=FALSE}
+question("What is the intercept of this model?",
+  answer("1046.608", correct = TRUE), 
+  answer("4.438"), 
+  answer("50.865"), 
+  answer("0.0278"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+```{r PSID9, echo=FALSE}
+question("What is the slope of this model?",
+  answer("2.205"), 
+  answer("4.438", correct = TRUE), 
+  answer("2.013"), 
+  answer("0.0278"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+```{r PSID10, echo=FALSE}
+question("What are the correct hypotheses for testing if there is a relationship between `wage` and `experience`?",
+  answer("$H_0: \\beta_1 = 0$ vs. $H_0: \\beta_1 \\neq 0$", correct = TRUE), 
+  answer("$H_0: \\beta_1 \\neq 0$ vs. $H_0: \\beta_1 = 0$", message = "Remember that the claim we want to prove goes in the alternative hypothesis!"), 
+  answer("$H_0: b_1 = 0$ vs. $H_0: b \\neq 0$", message = "This is a hypothesis about statistics, not parameters!"), 
+  answer("$H_0: \\beta_0 = 0$ vs. $H_0: \\beta_0 \\neq 0$", message = "This is a hypothesis about the intercept, not the slope!"),
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+```{r PSID11, echo=FALSE}
+question("Is there evidence of a significant relationship between `wage` and `experience` at the 5% level?",
+  answer("Yes, because the p-value is less than 0.05.", correct = TRUE), 
+  answer("No, because the p-value is less than 0.05."), 
+  answer("Yes, because the p-value is greater than 0.05."), 
+  answer("No, because the p-value is greater than 0.05."), 
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+```{r PSID12, echo=FALSE}
+question("What would a Type II error be in this case?",
+  answer("Claiming there is no relationship between `wage` and `experience` when there really is a relationship between `wage` and `experience`.", correct = TRUE), 
+  answer("Claiming there is a relationship between `wage` and `experience` when there really is a relationship between `wage` and `experience`.", message = "This is not an error!"), 
+  answer("Claiming there is no relationship between `wage` and `experience` when there really is not a relationship between `wage` and `experience`.", message = "This is not an error!"), 
+  answer("Claiming there is a relationship between `wage` and `experience` when there really is not a relationship between `wage` and `experience`.", message = "This is a Type I error!"), 
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+```{r PSID13, echo=FALSE}
+question("Could you have made a Type II error?",
+  answer("No, because I rejected the null hypothesis.", correct = TRUE), 
+  answer("No, because I did not reject the null hypothesis."), 
+  answer("Yes, because I rejected the null hypothesis."), 
+  answer("Yes, because I did not the null hypothesis."), 
+  allow_retry = T, 
+  random_answer_order = TRUE
+)
+```
+
+```{r PSID14, echo=FALSE}
+question("What is the proportion of variance in `wage` that can be explained by `experience`?",
+  answer("0.8131%", correct = TRUE), 
+  answer("0.6459%"), 
+  answer("2.8700%"), 
+  answer("<2e-14%"),
+  allow_retry = T
+)
+```
+
+Create a residual plot for the model. Is there evidence that a linear model is appropriate for this data?
+
+```{r PSID15, exercise = TRUE, exercise.setup = "prepare-PSIDa"}
+
+```
+
+```{r PSID15-solution}
+ggplot(data = model1, aes(x = .fitted, y = .resid)) + 
+         geom_point()
+```
+
+```{r PSID15-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+As you can see, this model isn't very good (the $R^2$ is very close to 0). Let's add a categorical variable to see if we can improve the relationship. 
+
+First, let's take another look at the original scatterplot. One way to visualize a categorical variable is to change the color of the points according to the levels. We haven't done this a while, but remember, it can be done by adding a `color = ` statement to `aes()`. Change the color of the points according to the variable `occupation`. Describe the relationship between all three variables. 
+
+```{r PSID16, exercise = TRUE, exercise.setup = "prepare-PSIDa"}
+
+```
+
+```{r PSID16-solution}
+ggplot(data = PSID1982, aes(x = experience, y = wage, color = occupation)) + 
+  geom_point()
+```
+
+```{r PSID16-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, add the categorical variable to the model. Save it as `model2`.  
+
+```{r PSID17, exercise = TRUE}
+model2
+```
+
+```{r PSID17-solution, message = FALSE, warning = FALSE, echo = FALSE}
+model2 <- lm(data = PSID1982, formula = wage ~ experience + occupation)
+```
+
+```{r PSID17-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+View the summary of `model2`. 
+
+```{r prepare-PSIDb, message = FALSE}
+model2 <- lm(data = PSID1982, formula = wage ~ experience + occupation)
+```
+
+```{r PSID18, exercise = TRUE, exercise.setup = "prepare-PSIDb"}
+
+```
+
+```{r PSID18-solution}
+summary(model2)
+```
+
+```{r PSID18-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r PSID19, echo=FALSE}
+question("What appears to be the reference level of `occupation`?",
+  answer("`blue`", correct = TRUE), 
+  answer("`white`"), 
+  answer("There is no way to tell."), 
+  allow_retry = T, 
+  random_answer_order = T
+)
+```
+
+```{r PSID20, echo=FALSE}
+question("How would you interpret the estimate of the slope for `occupation`?",
+  answer("On average, white collar workers make $406.58 more than blue collar workers.", correct = TRUE), 
+  answer("On average, blue collar workers make $406.58 more than white collar workers."), 
+  answer("For every one-year increase in experience, white collar workers are expected to make an additional $406.58."), 
+  answer("When a worker has 0 years in experience, they can be expected to make $406.58."),
+  allow_retry = T, 
+  random_answer_order = T
+)
+```
+
+```{r PSID21, echo=FALSE}
+question("What is the adjusted $R^2$ for this model?",
+  answer("0.1534"), 
+  answer("0.1505", correct = TRUE), 
+  answer("0.0008"), 
+  answer("<2e-16"),
+  allow_retry = T, 
+  random_answer_order = T
+)
+```
+
+```{r PSID22, echo=FALSE}
+question("Which model would you end up choosing? Why?",
+  answer("`model1`, because the $R^2$ is smaller"), 
+  answer("`model1`, because the adjusted $R^2$ is smaller"), 
+  answer("`model2`, because the adjusted $R^2$ is bigger.", correct = TRUE), 
+  answer("`model2`, because the $R^2$ is bigger."),
+  allow_retry = T
+)
+```
