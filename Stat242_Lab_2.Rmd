@@ -1,0 +1,398 @@
+---
+title: "Lab 2"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(MASS)
+library(tidyverse)
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+```
+
+## Goals
+
+Your goal is to continue working with datasets in R. The idea is to expand what we learned last week to include two-sample data analysis--summary statistics, graph creation, and the $t$-test. 
+
+## Part 1: Loading Packages
+
+R comes with a decent amount of built-in functionality, but to do anything useful you will need to install and load **packages** that contain additional functionality. You only need to install a package once, which can be done in the lower righthand window in RStudio under the "Packages" tab. 
+
+Packages must be loaded any time you want to use them in an R document. You load packages with the `library` command. As we did last week, we will work with `tidyverse`, which includes the following packages:
+
+* `dplyr`, for data manipulation (we will use this directly and frequently).
+* `ggplot2`, for data visualisation (we will use this directly and frequently).
+* `forcats`, for factors.
+* `purrr`, for functional programming.
+* `readr`, for data import.
+* `stringr`, for strings.
+* `tibble`, for tibbles, a modern re-imagining of data frames.
+* `tidyr`, for data tidying.
+
+The call to load this package is in the code chunk below. Go ahead and run this code chunk now.
+
+```{r packages, exercise = TRUE, message = FALSE}
+library(tidyverse)
+```
+
+<div id="loadpackages-hint">
+**Hint:** If this chunk is not working when you input it into R, check to make sure the packages are installed!
+</div>
+
+## Part 2: Reading in Data
+
+The following R code reads in the dataset describing housing prices in suburbs of Boston that we used last week, contained in the `MASS` package.
+
+Run the code below now to read in the data set.  No need to modify this code.
+
+```{r Boston, exercise = TRUE, message = FALSE}
+library(MASS)
+data(Boston)
+```
+
+## Part 3: Exploratory Data Analysis
+
+First, let's repeat some exercises from last week for review. Use the `dim()` function to find the number of rows (observational units) and columns (variables) in the data set.
+
+```{r EDA1, exercise = TRUE, message = FALSE}
+
+```
+
+```{r EDA1-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+dim(Boston)
+```
+
+```{r EDA1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Use the `colnames()` function to identify the variables contained in the dataset, and the help menu (`?`) for more information on each variable. Note that to use the help menu, you type the question mark and then the name of the object you're interested in--in this case, `Boston`.
+
+```{r EDA2, exercise = TRUE, message = FALSE}
+
+```
+
+```{r EDA2-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+colnames(Boston)
+```
+
+```{r EDA2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Use the `glimpse()` function to get a look at the data. Notice that `glimpse()` gives you a little bit of everything, including the dimensions and column names in this dataframe!
+
+```{r EDA3, exercise = TRUE, message = FALSE}
+
+```
+
+```{r EDA3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+glimpse(Boston)
+```
+
+```{r EDA3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+As you know, the `Boston` dataframe includes measurements on 506 towns in the suburbs of Boston. We are going to focus on the variable `medv`, which records the median value of owner-occupied homes in thousands of dollars for each suburb.
+
+Now let's revisit how we might calculate these values using the `tidyverse`. Remember that an important part of the `tidyverse` is the pipe operator--`%>%`. The pipe operator passes the objects on the left hand side to the functions on the right hand side. An example is shown below. 
+
+```{r, eval = FALSE}
+object %>% function()
+```
+
+Last week, we learned about the `summarize()` function creates a new dataframe with your chosen summary statistics. Run the following code chunk:
+
+```{r EDA4, exercise = TRUE}
+Boston %>%
+   summarize(Mean = mean(medv), SD = sd(medv), n = n())
+```
+
+Now, last week, it wasn't immediately obvious why we wrote our code like this--it seems like we're going out of our way to do something that could be done with a simple application of `mean()`, `sd()`, etc. But, this week, what we really want is two sets of summary statistics for each group, and you're about to see why it's so much easier!
+
+With base R, you'd have to create two new subsets of data--one for each group of interest. We're going to consider the two groups defined by `chas` (which describes if a tract of land borders the Charles River or not). Here's how we'd go about this...
+
+```{r EDA5, exercise = TRUE}
+chas <- subset(Boston, Boston$chas == 1)
+no_chas <- subset(Boston, Boston$chas == 0)
+
+dim(chas)
+mean(chas$medv)
+sd(chas$medv)
+
+dim(no_chas)
+mean(no_chas$medv)
+sd(no_chas$medv)
+```
+
+This is a lot of code. And it's a pain to have to assign names to two new objects, and apply each function to the new objects... There is a much better way!
+
+```{r EDA6, exercise = TRUE, message = FALSE}
+Boston %>%
+   group_by(chas) %>%
+   summarize(Mean = mean(medv), SD = sd(medv), n = n())
+```
+
+Note that the function `n()` gives you the number of observations. 
+What we did here is 
+
+1. Add a new line using the `group_by()` function, which separates the data into `chas == 0` (a tract does not border the Charles River) and `chas == 1` (a tract that does border the Charles River). 
+2. Joining this system to the rest of this code using another pipe operator, `%>%`.
+
+Not only is this a whole lot easier than creating two subsets (or more... we'll see that in a few weeks!!), but it still creates output that comes in handy for making nice tables (again, we'll see that in a few weeks). 
+
+## Part 4: Creating Plots
+
+This week, we are going to focus on comparing the average median housing price `medv`, recorded in thousands of dollars, over two different groups, houses built on tracts bordering the Charles River, and houses built on tracts not bordering the Charles River (note that each row of the dataframe represents a suburb, and the suburb has a median value. We take the averages of the median values to analyze them). 
+
+First, let's create a graph to show the distribution of median housing prices. Last week, you learned the basics of `ggplot2`--let's learn some tricks this week that are especially useful when working with more than one group of data.
+
+### Creating a Base Graph
+
+First, create a histogram describing the distribution of `medv` for the whole dataset. Use 22 bins.
+
+```{r ggplot1, exercise = TRUE, message = FALSE}
+
+```
+
+```{r ggplot1-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   geom_histogram(bins = 22)
+```
+
+```{r ggplot1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Faceting
+
+Since we want to see if there is a difference in average median housing values over two different groups, we need to use a 2-sample $t$-test. That means we need to check the assumptions (normality) **for each group separately**--you may have noticed we only have one histogram here! 
+
+Using base R, you *could* go through a longer process of creating subsets of the `Boston` data for each group, and then creating a histogram for each subset. There's nothing wrong with that approach! However, there is a much quicker way in the Tidyverse, using the **facets**. 
+
+Facets break the dataset into groups and display a graph for each group in its own window. There are a couple of different kinds of facets (see more on the R cheat sheet in the R Resources folder on Moodle), but I like `facet_grid()`. 
+
+You can add facets to your graph just like you add geoms--with the `+`. However, make sure that you add a plus sign EVERY TIME you add a new layer--we have two layers (one facet and one geom), so we need two plus signs. 
+
+```{r ggplot2, exercise = TRUE, message = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   facet_grid() + 
+   geom_histogram(bins = 22)
+```
+
+### Formulas
+
+Did anything happen when you ran that chunk of code? Probably not. That is because in addition to telling `ggplot2` we want facets, we need to tell it how to facet! This is where *formulas* come in. 
+
+You may be used to seeing formulas written mathematically--typically, we see something like $y=ax^2 + bx + c$, where the explanatory variable, $x$, is on the right hand side of the equals sign and the response variable, $y$, is on the left hand side. In R, we use the tilde, `~`, to stand in for the equals sign. The same formula would look like `y~ax^2 + bx + c` in R. We saw an example with an explanatory variable (a.k.a., the variable we are testing) and response variable (a.k.a., the grouping variable) in class on Tuesday: `TSPNDFOOD ~ DIF`. 
+
+To use formulas in `facet_grid()`, we don't need an explanatory and response variable. However, we need to specify what variables are described in the columns and rows. The variable described in rows is placed on the left hand side, and the variable described in columns is placed on the right hand side. If you only want rows, you replace the column side with a period (or vice-versa). 
+
+The following graph shows two histograms in two columns. Can you make it show the same histograms in rows? Note that they won't look exactly the same due to "stretching" to fill the plot area. 
+
+```{r ggplot3, exercise = TRUE, message = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   facet_grid(. ~ chas) + 
+   geom_histogram(bins = 22)
+```
+
+```{r ggplot3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22)
+```
+
+```{r ggplot3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="ggplot3-hint">
+**Hint:** Change the facet formula!
+</div>
+
+In addition to creating different facets for different groups, you may also be interested in making each histogram its own color.
+
+First, let's change the plot to be a color other than gray. The list of "official" colors in R is quite extensive--check it out [here](http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf). To change the color, you can add a `fill` argument in the `geom_histogram()` command. 
+
+Based on the following chunk, make the histograms "darkviolet".
+
+```{r ggplot4, exercise = TRUE, message = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22)
+```
+
+```{r ggplot4-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(fill = "darkviolet", bins = 22)
+```
+
+```{r ggplot4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+On your assignments, you can pick whatever color you want! But in addition, you can change the color according to some variable. To do this, you can change the `fill` argument to be the name of a variable inside the `aes()` statement (rather than `geom_histogram()`).
+
+Based on the following chunk, make each level of `chas` its own color.
+
+```{r ggplot5, exercise = TRUE, message = FALSE}
+ggplot(data = Boston, aes(x = medv)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22)
+```
+
+```{r ggplot5-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(data = Boston, aes(x = medv, fill = chas)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22)
+```
+
+```{r ggplot5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You should be able to see that adding this statement works--perhaps not exactly in the way that you thought. Use `glimpse()` to check out what the `chas` variable looks like.
+
+```{r ggplot6, exercise = TRUE, message = FALSE}
+glimpse()
+```
+
+```{r ggplot6-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+glimpse(Boston)
+```
+
+```{r ggplot6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You can see that `chas` has many `0` values in it. This is not exactly informative! Try using `unique()` to see what happens. 
+
+```{r ggplot7, exercise = TRUE, message = FALSE}
+unique()
+```
+
+```{r ggplot7-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+unique(Boston$chas)
+```
+
+```{r ggplot7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="ggplot7-hint">
+**Hint:** You need to specifically check what's inside the column `chas`, which means you need to use the dollar sign operator.
+</div>
+
+Now you can see that the only values in `Boston$chas` are 0 and 1. Furthermore, if you look back at the `glimpse()` output, you may see some light gray type saying `<int>`. What this is telling you is that `chas` is saved as an integer, either 0 or 1. When R sees that a variable is saved as an integer or as a numeric variable, it automatically imposes a scale where the color is more or less intense depending on the values. This isn't exactly what we want! In this scenario, 0 and 1 don't necessarily mean anything to us, we care more about the "yes" and "no" aspect of the variable. 
+
+To fix this issue, we need to resave the variable as what R calls a factor (you may know it better as a categorical or nominal variable). Run the code chunk below. 
+
+```{r ggplot8, exercise = TRUE, message = FALSE}
+Boston <- Boston %>%
+   mutate(chas = as.factor(chas))
+
+ggplot(data = Boston, aes(x = medv, fill = chas)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22)
+```
+
+The first few lines of code "resave" `Boston` as a version with a "mutated" `chas` variable--specifically, the mutation is that `chas` is now a factor (you can confirm this with the `glimpse()` function). Then, the second few lines create the graph. Is this more what you were expecting?
+
+```{r prepare-ttest}
+Boston <- Boston %>%
+   mutate(chas = as.factor(chas))
+```
+
+Note that `mutate()` can be used in many ways--perhaps to subtract one column from another to run a paired $t$-test (hint, hint). 
+
+It is fine with me if you use the default color scheme in `ggplot2`, but if you want more color options, you can use the `RColorBrewer` package (or, the `wesanderson` package, which creates color palettes based on Wes Anderson movies--I like "GrandBudapest2").
+
+To change the palette, load the `RColorBrewer` library and add a line of code to your graph. Notice that I am using `scale_fill_brewer()` because I am changing the `fill` inside `aes()`. What happens if you specify `palette="PiYG"` inside the new function?
+
+```{r ggplot9, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+library(RColorBrewer)
+ggplot(data = Boston, aes(x = medv, fill = chas)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22) + 
+   scale_fill_brewer()
+```
+
+```{r ggplot9-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+library(RColorBrewer)
+ggplot(data = Boston, aes(x = medv, fill = chas)) + 
+   facet_grid(chas ~ .) + 
+   geom_histogram(bins = 22) + 
+   scale_fill_brewer(palette="PiYG")
+```
+
+```{r ggplot9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+This is not a great option because the bottom graph is white--you can explore more color palette options [here](r-statistics.co/Complete-Ggplot2-Tutorial-Part1-With-R-Code.html) (search the page for "palette") or possibly, [here](https://web.archive.org/web/20210407205358/http://www.sthda.com/english/wiki/colors-in-r) (this is the better of the two tutorials but you have to access the archived version).
+
+Now that we have histograms, we can investigate the assumptions for the 2-sample $t$-test. What are those assumptions? Does the data satisfy the assumptions?
+
+## Part 4: $t$-test and confidence interval
+
+Regardless of the assumptions, proceed with the analysis. First, select the correct formula to to test if the average median value is different for suburbs with tracts of lands bordering the Charles River and suburbs with tracts of lands not bordering the Charles River.
+
+```{r ttest1, echo=FALSE}
+question("What is the correct formula to use inside `t.test()`?",
+  answer("`medv ~ chas`", correct = TRUE),
+  answer("`chas ~ medv`"),
+  answer("`medv ~ .`"),
+  answer("`. ~ chas`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Someone asked in class how we can tell which group comes first and which mean is subtracted. Sometimes, you can tell from the output (see below for a further explanation), but it is good to know before you run the `t.test()`. We know that `chas` is now saved as a factor (because we did it before). When R saves variables as factors, it always picks one to be what is known as the reference level, or the baseline. If we are thinking about the test in terms of $\mu_1 - \mu_2$, the reference level serves as "Group 1". 
+
+Typically, R sets the level that comes first alphabetically as the reference (so, of "no" and "yes", "no" is the reference level because n comes before y). If the levels start with numbers, they are assigned in numerical order. Unfortunately, there is no function in R that will tell you what the reference is! However, you can apply the `levels()` function to factors in R and read the output--the one listed first is the reference level. 
+
+```{r ttest2, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+
+```
+
+```{r ttest2-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+levels(Boston$chas)
+```
+
+```{r ttest2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r ttest3, echo=FALSE}
+question("Based on the above output, what is the reference level for `chas`?",
+  answer("`0`", correct = TRUE),
+  answer("`1`"),
+  answer("`yes`"),
+  answer("`no`"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Now, set up and run the necessary R code below to conduct a $t$-test and find a confidence interval for the average difference in median housing values. Does there appear to be a significant difference?
+
+```{r ttest, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+
+```
+
+```{r ttest-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+t.test(medv ~ chas, data = Boston)
+```
+
+```{r ttest-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Make sure you and your group are able to formally write the results up for this analysis, including hypotheses, stating significance levels, checking assumptions and conditions, and a formal conclusion--base your write up on the solutions key for Homework 1. 

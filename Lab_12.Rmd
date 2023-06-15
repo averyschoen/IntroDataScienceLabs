@@ -6,453 +6,146 @@ runtime: shiny_prerendered
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(car)
 library(dplyr)
+library(GGally)
+library(gghighlight)
 library(ggplot2)
+library(ggpubr)
+library(gmodels)
 library(gradethis)
 library(learnr)
+library(multcomp)
 library(readr)
 tutorial_options(exercise.checker = gradethis::grade_learnr)
 
-mtcars <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/mtcars.csv", stringsAsFactors = TRUE)
-gasprice <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/quantreg/gasprice.csv")
+library(Sleuth3)
+ex0327
 
-year <- c(1963, 1974, 1981, 1982, 1984, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000)
-pairs <- c(417, 791, 1188, 1480, 1757, 1875, 2238, 2475, 2680, 3035, 3399, 3749, 4015, 4449, 4712, 5094, 5295, 5748, 6104, 6471)
-eagles <- data.frame(Year = year, Pairs = pairs)
+#model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
 
-HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
-
-HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
-
-mult8 <- seq(from = 8, to = 96, by = 8)
-
-hillraces <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/DAAG/hills.csv")
+# square <- function(x){
+#   xsquared <- x^2
+# return(xsquared)}
+# 
+# discriminant <- function(a, b, C){
+#   disc <- b^2 - 4*a*C
+# return(disc)}
+# 
+# roots1 <- function(a, b, C){
+#   x1 <- (-b + sqrt(discriminant(a, b, C)))/(2*a) 
+#   x2 <- (-b - sqrt(discriminant(a, b, C)))/(2*a) 
+# return(c(x1, x2))}
+# 
+# roots2 <- function(a, b, C){
+#   x1 <- (-b + sqrt(discriminant(a, b, C)))/(2*a) 
+#   x2 <- (-b - sqrt(discriminant(a, b, C)))/(2*a) 
+# return(list(x1 = x1, x2 = x2))}
+# 
+# test <- roots2(5, 13, 3)
+# 
+# residualplots <- function(data = data, formula = formula){
+#   model <- lm(data = data, formula = formula)
+#   
+#   residuals_df <- data.frame(cbind(model$fitted.values, model$residuals))
+#   colnames(residuals_df) <- c("Fitted", "Residuals")
+# 
+#   resplot <- ggplot(data = model, aes(x = .fitted, y = .resid)) +
+#     geom_point() + 
+#     geom_hline(yintercept = 0, color = "red") +
+#     xlab("Fitted") + 
+#     ylab("Residuals")
+#   
+#   resdens <- ggplot(data = model, aes(x = .resid)) +
+#     geom_histogram(aes(y=..density..), bins = 6) +
+#     geom_density() + 
+#     xlab("Residuals") +
+#     ylab("Density")
+#   
+#   resqq <- ggplot(data = model, aes(sample = .resid)) +
+#     stat_qq() +
+#     stat_qq_line() +
+#     xlab("Residuals")
+#     ggtitle("Residuals Q-Q")
+#   
+#   resplots <- ggarrange(resplot, resdens, resqq, ncol = 3, nrow = 1)
+#   returnlist <- list(residuals_df = residuals_df, resplots = resplots)
+# return(returnlist)}
+# 
+# model1_residuals <- residualplots(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+# 
+# threshold <- 2*model1$rank/dim(ex0327)[1]
+# 
+# ex0327$m1_highleverage <- as.factor(hatvalues(model1) > threshold)
+# 
+# diagnostics_df <- data.frame(cbind(1:dim(ex0327)[1], hatvalues(model1)))
+# colnames(diagnostics_df) <- c("Index", "Leverage")
+# 
+# diagnostics_df$Studentized <- rstudent(model1)
+# diagnostics_df$Cooks <- cooks.distance(model1)
+# 
+# diagnosticsplots <- function(data = data, formula = formula){
+#   model <- lm(data = data, formula = formula)
+#   
+#   diagnostics_df <- data.frame(cbind(1:dim(data)[1], hatvalues(model1), 
+#                                      rstudent(model1), cooks.distance(model1)))
+#   colnames(diagnostics_df) <- c("Index", "Leverage", "Studentized", "Cook")
+# 
+#   threshold <- 2*model$rank/dim(data)[1]
+#   
+#   leverage <- ggplot(data = diagnostics_df, aes(x = Index, y = Leverage)) + 
+#     geom_point() + 
+#     geom_hline(yintercept = threshold, color = "red") + 
+#     gghighlight(Leverage > threshold, label_key = Index)
+#   
+#   studres <- ggplot(data = diagnostics_df, aes(x = Index, y = Studentized)) + 
+#     geom_point() + 
+#     geom_hline(yintercept = -2, color = "red") + 
+#     geom_hline(yintercept = 2, color = "red") +
+#     gghighlight(abs(Studentized) > 2, label_key = Index)
+#   
+#   cooksd <- ggplot(data = diagnostics_df, aes(x = Index, y = Cook)) + 
+#     geom_point() + 
+#     geom_hline(yintercept = 1, color = "red") + 
+#     gghighlight(Cook > 1, label_key = Index)
+#   
+#   plots <- ggarrange(leverage, studres, cooksd, ncol = 1, nrow = 3)
+#   returnlist <- list(diagnostics_df = diagnostics_df, plots = plots)
+#   return(returnlist)}
+# 
+# ex0327_34 <- ex0327[-34,]
+# 
+# model2 <- lm(ex0327_34, formula = logit(PollenRemoved) ~ DurationOfVisit*BeeType)
 ```
 
 ## Goals
 
-Your goal is to practice using the `lm()` command for linear regression, as well as the associated code (including creating residual plots).
+Your goal is practice creating residual and diagnostic plots to investigate, but you will also learn how to write functions that can repeat complex sets of calculations for you! No more coding a million lines for every model to investigate. 
 
 ## Part 1: Loading Packages
 
-Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `ggplot2`.  Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `car`, `GGally`, `ggplot2` and `ggpubr`, but we will also install a new package, `gghighlight`, that adds some extra functionality. Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
 
 ```{r loadpackages, exercise = T}
+library(car)
+library(GGally)
+library(gghighlight)
 library(ggplot2)
+library(ggpubr)
 ```
 
 ## Part 2: Reading in Data
 
-Today, we will be using several different datasets to explore different types of relationships. We've actually already seen them-- `mtcars`, `gasprice`, `HousePrices`, plus a small dataset that I entered manually, `eagles`. There is an additional new dataset, `hillraces`. 
+We will be using data from Exercise 3.27 in the Statistical Sleuth. The dataset contains information on a study investigating reproductive strategies in plants, including the time a bee spends at a source of pollen and the proportions of pollen removed by the bee. Run the code below now to load the data set. No need to modify this code, but remember how to use this function to read in data in the future!
 
-```{r data, exercise = TRUE}
-mtcars <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/mtcars.csv", stringsAsFactors = TRUE)
-gasprice <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/quantreg/gasprice.csv")
-HousePrices <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/HousePrices.csv", stringsAsFactors = TRUE)
-glimpse(eagles)
-hillraces <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/DAAG/hills.csv")
+```{r ex0327, exercise = T}
+library(Sleuth3)
+data(ex0327)
 ```
 
-We will be using the `HousePrices` dataframe the most--it describes house prices in Windsor, Canada, as well as some related variables. There are many variables in this dataset--read more at the [dataset documentation](https://vincentarelbundock.github.io/Rdatasets/doc/AER/HousePrices.html).  
+## Part 3: Logical Operators and Booleans
 
-<div id="data-hint">
-**Hint:** Note the extra `stringsAsFactors` argument--this needs to be included to make some of our code work correctly!!
-</div>
-
-## Part 3: Residual Plots
-
-### `mtcars`
-
-The `mtcars` dataset includes data on fuel consumption and other aspects of 32 cars from a 1974 issue of *Motor Trends* magazine [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/datasets/mtcars.html). We are specifically interested in how the weight of the car (`wt`) might impact the car's displacement, which can be thought of as the size of the engine (`disp`).
-
-Recreate a scatterplot displaying the relationship between weight and displacement. 
-
-```{r mtcars, exercise = TRUE}
-ggplot(data = mtcars, aes(x = , y = )) +
-  geom_point()
-```
-
-```{r mtcars-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(data = mtcars, aes(x = wt, y = disp)) +
-  geom_point()
-```
-
-```{r mtcars-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Refresh your memories--describe this relationship in terms of its form, direction, strength, and unusual values. Is a linear relationship appropriate for describing weight and displacement? If not, what type of relationship might be more appropriate?
-
-```{r mtcars2, echo=FALSE}
-question("Which of the following describe the relationship between weight and engine displacement? Select all that apply.",
-  answer("Linear"),
-  answer("Non-Linear", correct = TRUE),
-  answer("Negative"),
-  answer("Positive", correct = TRUE),
-  answer("Weak"),
-  answer("Moderate"),
-  answer("Strong", correct = TRUE),
-  answer("Unusual Values"),
-  answer("No Unusual Values", correct = TRUE),
-  allow_retry = T
-)
-```
-
-```{r mtcars25, echo=FALSE}
-question("What is the correct formula for predicting `disp` from `wt`?",
-  answer("`disp ~ wt`", correct = TRUE),
-  answer("`wt ~ disp`"),
-  answer("`. ~ wt`"),
-  answer("`disp ~ .`"),
-  allow_retry = T,
-  random_answer_order = TRUE
-)
-```
-
-Now, fit a model predicting `disp` from `wt`--save it as `m_mtcars`.
-
-```{r mtcars3, exercise = TRUE}
-m_mtcars <- lm(data = mtcars, formula = disp ~ )
-```
-
-```{r mtcars3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_mtcars <- lm(data = mtcars, formula = disp ~ wt)
-```
-
-```{r mtcars3-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Using `m_mtcars`, create the residual plot. What patterns do you see in the data?
-
-```{r prepare-mtcars, message = FALSE}
-m_mtcars <- lm(data = mtcars, formula = disp ~ wt)
-```
-
-```{r mtcars4, exercise = TRUE, exercise.setup = "prepare-mtcars"}
-ggplot(data = , aes(x = .fitted, y = .resid)) +
-  geom_point()
-```
-
-```{r mtcars4-solution}
-ggplot(data = m_mtcars, aes(x = .fitted, y = .resid)) +
-  geom_point()
-```
-
-```{r mtcars4-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-This relationship is actually quadratic. You can see that the residuals at the ends are positive, and the residuals in the middle are negative. 
-
-### `gasprice`
-
-The `gasprice` dataset includes data on gas prices in the United States, collected once per week from 1990 to 2003 [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/quantreg/gasprice.html).
-
-Recreate a scatterplot displaying the relationship between time (`time`) and gas price (`value`).
-
-```{r gasprice, exercise = TRUE}
-ggplot(data = , aes()) +
-  geom_point()
-```
-
-```{r gasprice-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(gasprice, aes(x = time, y = value)) +
-  geom_point()
-```
-
-```{r gasprice-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r gasprice2, echo=FALSE}
-question("Which of the following describe the relationship between gas prices and time? Select all that apply.",
-  answer("Linear"),
-  answer("Non-Linear", correct = TRUE),
-  answer("Negative"),
-  answer("Positive", correct = TRUE),
-  answer("Weak"),
-  answer("Moderate"),
-  answer("Strong", correct = TRUE),
-  answer("Unusual Values"),
-  answer("No Unusual Values", correct = TRUE),
-  allow_retry = T
-)
-```
-
-```{r gasprice25, echo=FALSE}
-question("What is the correct formula for predicting `value` from `time`?",
-  answer("`value ~ time`", correct = TRUE),
-  answer("`time ~ value`"),
-  answer("`gasprice ~ time`"),
-  answer("`time ~ gasprice`"),
-  allow_retry = T,
-  random_answer_order = TRUE
-)
-```
-
-Now, fit a model predicting `value` from `time`--save it as `m_gasprice`.
-
-```{r gasprice3, exercise = TRUE}
-m_gasprice <- lm(data = , formula =  )
-```
-
-```{r gasprice3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_gasprice <- lm(data = gasprice, formula = value ~ time)
-```
-
-```{r gasprice3-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Using `m_gasprice`, create the residual plot. What patterns do you see in the data?
-
-```{r prepare-gasprice, message = FALSE}
-m_gasprice <- lm(data = gasprice, formula = value ~ time)
-```
-
-```{r gasprice4, exercise = TRUE, exercise.setup = "prepare-gasprice"}
-ggplot(data = , aes(x = , y = )) +
-  geom_point()
-```
-
-```{r gasprice4-solution}
-ggplot(data = m_gasprice, aes(x = .fitted, y = .resid)) +
-  geom_point()
-```
-
-```{r gasprice4-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-This type of graph is indicative that you are working with a time series. When picking datasets to work with for your final project, do NOT choose a dataset that looks like this!
-
-### `eagles`
-
-The `eagles` dataset contains information the [number of mating pairs of bald eagles in the United States](https://courses.lumenlearning.com/wmopen-concepts-statistics/chapter/exponential-relationships-1-of-6/). In 1967, bald eagles officially became an endangered species, and in 1972, the use of DDT (a pesticide causing damage to the shells of the eagle eggs) was banned--scientists have been tracking the population ever since.
-Recreate a scatterplot displaying the relationship between time (`Year`) and the number of mating pairs (`Pairs`).
-
-```{r eagles1, exercise = TRUE}
-ggplot() +
-  geom_point()
-```
-
-```{r eagles1-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(eagles, aes(x = Year, y = Pairs)) +
-  geom_point()
-```
-
-```{r eagles1-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r eagles2, echo=FALSE}
-question("Which of the following describe the relationship between mating pairs of eagles and year? Select all that apply.",
-  answer("Linear"),
-  answer("Non-Linear", correct = TRUE),
-  answer("Negative"),
-  answer("Positive", correct = TRUE),
-  answer("Weak"),
-  answer("Moderate"),
-  answer("Strong", correct = TRUE),
-  answer("Unusual Values"),
-  answer("No Unusual Values", correct = TRUE),
-  allow_retry = T
-)
-```
-
-```{r eagles25, echo=FALSE}
-question("What is the correct formula for predicting `Pairs` from `Year`?",
-  answer("`Pairs ~ Year`", correct = TRUE),
-  answer("`Year ~ Pairs`"),
-  answer("`. ~ Year`"),
-  answer("`Year ~ .`"),
-  allow_retry = T,
-  random_answer_order = TRUE
-)
-```
-
-Now, fit a model predicting `Pairs` from `Year`--save it as `m_eagles`.
-
-```{r eagles3, exercise = TRUE}
-m_eagles <- lm()
-```
-
-```{r eagles3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_eagles <- lm(data = eagles, formula = Pairs ~ Year)
-```
-
-```{r eagles3-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Using `m_eagles`, create the residual plot. What patterns do you see in the data?
-
-```{r prepare-eagles, message = FALSE}
-m_eagles <- lm(data = eagles, formula = Pairs ~ Year)
-```
-
-```{r eagles4, exercise = TRUE, exercise.setup = "prepare-eagles"}
-ggplot() +
-  geom_point()
-```
-
-```{r eagles4-solution}
-ggplot(data = m_eagles, aes(x = .fitted, y = .resid)) +
-  geom_point()
-```
-
-```{r eagles4-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-As it turns out, the relationship between year and number of mating pairs is best described with an exponential relationship, not a straight line! In addition, it's MUCH easier to see with the residual plot!
-
-### `HousePrices`
-
-The `HousePrices` dataset is another real estate dataset, containing information on sales prices of houses sold in Windsor, Canada, during July, August, and September of 1987 ([documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/HousePrices.html)). The dataset also includes information on many other characteristics, including `aircon` (whether the house had air conditioning) and `driveway` (whether the house had a driveway). Don't forget, between the `glimpse()`, `colnames()`, and `?` function, you should be able to read about each variable!
-
-Recreate a scatterplot displaying the relationship between lot size, in square feet (`lotsize`) and the price of the house (`price`).
-
-```{r windsor1, exercise = TRUE}
-ggplot()
-
-```
-
-```{r windsor1-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(HousePrices, aes(x = lotsize, y = price)) +
-  geom_point()
-```
-
-```{r windsor1-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r windsor2, echo=FALSE}
-question("Which of the following describe the relationship between mating pairs of lot size and price? Select all that apply.",
-  answer("Linear", correct = TRUE),
-  answer("Non-Linear"),
-  answer("Negative"),
-  answer("Positive", correct = TRUE),
-  answer("Weak"),
-  answer("Moderate", correct = TRUE),
-  answer("Strong"),
-  answer("Unusual Values"),
-  answer("No Unusual Values", correct = TRUE),
-  allow_retry = T
-)
-```
-
-```{r windsor25, echo=FALSE}
-question("What is the correct formula for predicting `price` from `lotsize`?",
-  answer("`price ~ lotsize`", correct = TRUE),
-  answer("`lotsize ~ price`"),
-  answer("`HousePrices ~ lotsize`"),
-  answer("`HousePrices ~ price`"),
-  allow_retry = T,
-  random_answer_order = TRUE
-)
-```
-
-Now, fit a model predicting `price` from `lotsize`--save it as `m_windsor`.
-
-```{r windsor3, exercise = TRUE}
-m_eagles <- lm()
-```
-
-```{r windsor3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_windsor <- lm(data = HousePrices, formula = price ~ lotsize)
-```
-
-```{r windsor3-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Using `m_windsor`, create the residual plot. What patterns do you see in the data?
-
-```{r prepare-windsor, message = FALSE}
-m_windsor <- lm(data = HousePrices, formula = price ~ lotsize)
-```
-
-```{r windsor4, exercise = TRUE, exercise.setup = "prepare-windsor"}
-
-```
-
-```{r windsor4-solution}
-ggplot(data = m_windsor, aes(x = .fitted, y = .resid)) +
-  geom_point()
-```
-
-```{r windsor4-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-This is actually an example of non-constant variance! Money variables are often very right-skewed and can contribute to the problem. To fix this, we are actually going to use the `log()` transform for the rest of the lab. Fit a new `m_windsor` using the code chunk below. 
-
-```{r windsor5, exercise = TRUE}
-m_windsor <- lm(data = HousePrices, formula = log(price) ~ lotsize)
-```
-
-Now refit the residual plot. Does this look better?
-
-```{r prepare-windsor2, message = FALSE}
-m_windsor <- lm(data = HousePrices, formula = log(price) ~ lotsize)
-```
-
-```{r windsor55, exercise = TRUE, exercise.setup = "prepare-windsor2"}
-
-```
-
-```{r windsor55-solution}
-ggplot(data = m_windsor, aes(x = .fitted, y = .resid)) +
-  geom_point()
-```
-
-```{r windsor55-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-## Part 4: Investigating Slopes and Intercepts
-
-We have already fit the linear regression model. What are the values of $b_0$ and $b_1$? 
-
-```{r equation, exercise = TRUE, exercise.setup = "prepare-windsor2"}
-
-```
-
-```{r equation-solution}
-m_windsor
-```
-
-```{r equation-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Write the equation of the line after you find these values. How would you interpret the slope? How would you interpret the intercept? Does it make sense to interpret the intercept? Why or why not?
-
-### Tests on the Slope
-
-Run a test to see if $\beta_1 = 0$. Is there evidence of a difference? Make sure you and your group can run the full test!
-
-```{r slopetest, exercise = TRUE, exercise.setup = "prepare-windsor2"}
-
-```
-
-```{r slopetest-solution}
-summary(m_windsor)
-```
-
-```{r slopetest-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-<div id="slopetest-hint">
-**Hint:** Remember that the default output of `summary()` returns a hypothesis test for $\beta_0$ and $\beta_1$ individually being equal to 0. 
-</div>
-
-## Part 5: Outliers
-
-Before we start the next problem, let's do some preliminary data exploration. 
+Let's review some basic topics that will be useful for our other activities today.
 
 ### Logical Operators
 
@@ -591,7 +284,11 @@ question("How many responses (`TRUE` or `FALSE`) does R give you?",
 
 We could count the number of `TRUE` values manually, but that can be time-consuming and error-prone. Instead, we can apply the `sum()` function to the code containing the logical operator `==` to count for us--remember, `TRUE` is treated as 1 and `FALSE` is treated as 0. Write a line of code to confirm that there are four multiples of 8 that are divisible by three between 8 and 96.
 
-```{r booleansum, exercise = TRUE}
+```{r prepare-boolean, message = FALSE}
+mult8 <- seq(from = 8, to = 96, by = 8)
+```
+
+```{r booleansum, exercise = TRUE, exercise.setup = "prepare-boolean"}
 
 ```
 
@@ -603,9 +300,9 @@ sum(mult8 %% 3 == 0)
 grade_code()
 ```
 
-We know that there are four multiples of 8 that are divisible by three--but which ones? The `which()` function will return the positions of the elements of `mult8` that are divisible by 3. 
+We know that there are four multiples of 8 that are divisible by three--but which ones? The `which()` function will return the positions of the elements of `mult8` that are divisible by 3.
 
-```{r which, exercise = TRUE}
+```{r which, exercise = TRUE, exercise.setup = "prepare-boolean"}
 which()
 ```
 
@@ -651,14 +348,14 @@ which(norm30 > 2)
 grade_code()
 ```
 
-Find out which of the houses in `HousePrices` have central AC. 
+Find out which of the rows in `ex0327` have data for `"Worker"` bees. 
 
 ```{r which4, exercise = TRUE}
 which()
 ```
 
 ```{r which4-solution, message = FALSE, warning = FALSE, echo = FALSE}
-which(HousePrices$aircon == "yes")
+which(ex0327$BeeType == "Worker")
 ```
 
 ```{r which4-check, message = FALSE, warning = FALSE}
@@ -669,16 +366,16 @@ grade_code()
 
 Every so often, you've seen me use the dollar sign (`$`) in R to pull out a column of a data frame. The dollar sign only works if you know the names of the columns. R can also extract rows, columns, or elements of a data frame using the square brackets (`[]`). This type of extraction is based on the positions. 
 
-To extract a single element, you place the row index, a comma, and the column index inside the square brackets, which follow the name of the data frame (`dataframe[row, column]`). For example, you would code `HousePrices[300, 10]` to extract the element in the $300^{th}$ row and the $10^{th}$ column. 
+To extract a single element, you place the row index, a comma, and the column index inside the square brackets, which follow the name of the data frame (`dataframe[row, column]`). For example, you would code `ex0327[29, 3]` to extract the element in the $29^{th}$ row and the $3^{rd}$ column. 
 
-Change the following line of code to extract the element in the $120^{th}$ row and the $5^{th}$ column.
+Change the following line of code to extract the element in the $14^{th}$ row and the $2^{nd}$ column.
 
 ```{r sqbrackets, exercise = TRUE}
-HousePrices[300, 10]
+ex0327[29, 3]
 ```
 
 ```{r sqbrackets-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
-HousePrices[120, 5]
+ex0327[14, 2]
 ```
 
 ```{r sqbrackets-check, message = FALSE, warning = FALSE}
@@ -686,222 +383,1247 @@ grade_code()
 ```
 
 ```{r 2_5}
-question("What is the value in the $120^{th}$ row and the $5^{th}$ column?",
-  answer("`1`", correct = TRUE),
+question("What is the value in the $14^{th}$ row and the $2^{th}$ column?",
+  answer("`35`", correct = TRUE),
   answer("`NULL`", message = "It looks like you have your indices flipped!"),
-  answer("`no`", message = "Don't forget to change the values!"),
+  answer("`Queen`", message = "Don't forget to change the values!"),
   answer("None of the above", message = "Keep trying!"),
   allow_retry = T,
   random_answer_order = TRUE
 )
 ```
 
-You can also extract a whole row! Continue using the square brackets--however, leave the column index out. Extract the $412^{th}$ row from the `Boston` data frame.  
+You can also extract a whole row! Continue using the square brackets--however, leave the column index out. Extract the $44^{th}$ row from the `ex0327` data frame.  
 
 ```{r rindex, exercise = TRUE}
 
 ```
 
 ```{r rindex-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
-HousePrices[412,]
+ex0327[44,]
 ```
 
 ```{r rindex-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-To extract a column, you use the square brackets but leave the row index out. Extract the $8^{th}$ column from the `HousePrices` data frame. 
+To extract a column, you use the square brackets but leave the row index out. Extract the $1^{st}$ column from the `ex0327` data frame. 
 
 ```{r cindex, exercise = TRUE}
 
 ```
 
 ```{r cindex-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
-HousePrices[,8]
+ex0327[,1]
 ```
 
 ```{r cindex-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Note that this is the same as `HousePrices$recreation`--if we had known the name, we could have extracted it automatically! The difference between the dollar sign operator and the square brackets is like the difference between putting in "Mount Holyoke College" and "50 College Street, South Hadley, MA 01075" into your GPS. One requires you to know the name, and the other requires you to know the exact location.
+Note that this is the same as `ex0321$PollenRemoved`--if we had known the name, we could have extracted it automatically! The difference between the dollar sign operator and the square brackets is like the difference between putting in "Mount Holyoke College" and "50 College Street, South Hadley, MA 01075" into your GPS. One requires you to know the name, and the other requires you to know the exact location.
 
-### Scottish Hill Races
+## Part 4: Data Exploration
 
-The `hillraces` dataset describes data from 35 Scottish hill races in 1984.
+Create a plot of `PollenRemoved` variable against `DurationOfVisit`. For this plot, apply a special transform called the `logit()`--we have not covered it yet, but it will help make the data more linear. In addition to the scatterplot, color the points by `BeeType` and add lines to the model using `geom_smooth()`. 
 
-Let's test out some multiple linear regression! Fit a model predicting the completion time of the race (`time`) from the distance of the race (`dist`) AND the amount a participant needs to climn (`climb`) --save it as `m_hillraces`. Make sure you know how to write the equation for the model. 
-
-```{r hillraces1, exercise = TRUE}
-m_hillraces <- 
+```{r scatterplot, exercise = TRUE}
+ggplot(data = ex0327, aes(x = DurationOfVisit, y = logit(PollenRemoved))) +
 ```
 
-```{r hillraces1-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_hillraces <- lm(data = hillraces, time ~ dist + climb)
+```{r scatterplot-solution}
+ggplot(data = ex0327, aes(x = DurationOfVisit, y = logit(PollenRemoved), color = BeeType)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
 ```
 
-```{r hillraces1-check, message = FALSE, warning = FALSE}
+```{r scatterplot-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Is `dist` a significant predictor of time? 
+Does it look reasonable to use linear models to describe the data?
 
-```{r prepare-hillraces, message = FALSE}
-m_hillraces <- lm(data = hillraces, time ~ dist + climb)
+### Model Fitting
+
+Fit a linear model, named `model1`, predicting the logit of `PollenRemoved` from the interaction `DurationOfVisit` and `BeeType`. 
+
+```{r model1, exercise = TRUE}
+
 ```
 
-```{r hillraces2, exercise = TRUE, exercise.setup = "prepare-hillraces"}
-
+```{r model1-solution}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
 ```
 
-```{r hillraces2-solution, message = FALSE, warning = FALSE, echo = FALSE}
-summary(m_hillraces)
-```
-
-```{r hillraces2-check, message = FALSE, warning = FALSE}
+```{r model1-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-What is the $r^2$ for the model?
+Write the equation describing this linear model. 
 
-```{r hillraces3, exercise = TRUE, exercise.setup = "prepare-hillraces"}
+### A Function for Residual Plots
+
+Using this model, create a scatterplot of the residuals. 
+
+```{r prepare-model, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+```
+
+```{r resids1, exercise = TRUE, exercise.setup = "prepare-model"}
 
 ```
 
-```{r hillraces3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-summary(m_hillraces)$r.squared
-```
-
-```{r hillraces3-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Create a plot of the residuals for each observation. Is there any evidence that any of the observations are outliers? 
-
-```{r hillraces4, exercise = TRUE, exercise.setup = "prepare-hillraces"}
-
-```
-
-```{r hillraces4-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(data = m_hillraces, aes(x = .fitted, y = .resid)) +
+```{r resids1-solution}
+ggplot(data = model1, aes(x = .fitted, y = .resid)) +
   geom_point()
 ```
 
-```{r hillraces4-check, message = FALSE, warning = FALSE}
+```{r resids1-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-There are two points that I might be concerned about. One near (0.23, 1.1), and one near (2.9, 0.55). Identify which rows contain the outliers using the `which()` function.
+Now, create a QQ plot of the residuals to see if they are normal. 
 
-```{r hillraces5, exercise = TRUE, exercise.setup = "prepare-hillraces"}
-which()
+```{r resids2, exercise = TRUE, exercise.setup = "prepare-model"}
+
 ```
 
-```{r hillraces5-solution, message = FALSE, warning = FALSE, echo = FALSE}
-which(m_hillraces$residuals > 0.4)
+```{r resids2-solution}
+ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
 ```
 
-```{r hillraces5-check, message = FALSE, warning = FALSE}
+```{r resids2-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-<div id="hillraces-hint">
-**Hint:** Use a logical operator to see which of `m_hillraces$residuals` is greater than 0.4.
+The plot for each code appears below--save them as `residualplot` and `qqplot`. Then, apply the `ggarrange()` function to put both plots on the same row. 
+
+```{r resids3, exercise = TRUE, exercise.setup = "prepare-model"}
+ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+```
+
+```{r resids3-solution}
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)
+```
+
+```{r resids3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Does it seem like this linear model is appropriate for the data, based on these plots?
+
+## Part 5: Writing Functions
+
+When we have to repeat a set of calculations multiple times, like when making residual plots, it can be helpful to write a function. You have control about the arguments, calculations, and the output of the functions you write. The code below mimics the general structure of the functions. 
+
+```{r functionexample, exercise = TRUE}
+my.function <- function(argument1, argument2, ...){
+  
+  calculations, calculations, calculations
+  
+  return(output)}
+```
+
+* First of all, you select the name for your function. The name should be simple, but informative enough to help you remember what the function does. I have chosen `my.function`.
+* Next, you store the actual calculations of the function into the name you have chosen using the right arrow, `<-`. 
+* The `function` is the command assigned to declare a function. You cannot create your own functions without using this command.
+     + Inside the function, you can declare the arguments you would like to use. You can use as many as you want. You should name the arguments--again, simple names but relatively informative.
+* After the function, you use the curly braces, `{}`, around the calculations that you want to repeat. These calculations can be as complex as you like!
+* The `return()` is the command assigned to declare the outputs of your function. **If you don't include it, your function will not produce any outputs--it will perform the calculations, but you will not be able to recover them**
+
+### Functions with One Argument
+
+Below, I have written the outline of a function for squaring a variable (which we already have a way to do, but this is helpful for learning). What calculations belong inside the curly braces? Since we used the argument `x`, the calculations should be written in terms of `x`. 
+
+```{r function1, exercise = TRUE}
+square <- function(x){
+  xsquared <-
+return(xsquared)}
+```
+
+```{r function1-solution}
+square <- function(x){
+  xsquared <- x^2
+return(xsquared)}
+```
+
+```{r function1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, using your function, find the square of `9`--hopefully, it is what you expect! 
+
+```{r prepare-functiona, message = FALSE}
+square <- function(x){
+  xsquared <- x^2
+return(xsquared)}
+```
+
+```{r function2, exercise = TRUE, exercise.setup = "prepare-functiona"}
+
+```
+
+```{r function2-solution}
+square(9)
+```
+
+```{r function2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Functions with Multiple Arguments
+
+You can also write a function with multiple arguments by typing them inside the parentheses and separating them with commas. 
+
+Below, I have written the outline of a function for solving for the discriminant of a quadratic equation $ax^2 + bx + c$. The discriminant is given by 
+
+$$b^2 - 4ac.$$
+Fill in the rest of the function with arguments `a`, `b`, and `C` (use a capital `C` because the lowercase `c` already has a job in R--the function `c()` creates vectors, and it is bad practice to overwrite existing objects).
+
+```{r function3, exercise = TRUE}
+discriminant <- function(...){
+  disc <- 
+}
+```
+
+```{r function3-solution}
+discriminant <- function(a, b, C){
+  disc <- b^2 - 4*a*C
+return(disc)}
+```
+
+```{r function3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="function3-hint">
+**Hint:** Don't forget to return the result!   
 </div>
 
-Remove row 18 using the code chunk below, then, refit the model. Name it `m_hillraces2`.
+Now, apply your function to find the discriminant of the quadratic equation $3x^2 - 8x + 5$.
 
-```{r hillraces6, exercise = TRUE, exercise.setup = "prepare-hillraces"}
-hillraces_18 <- hillraces[-18,]
+```{r prepare-functionb, message = FALSE}
+discriminant <- function(a, b, C){
+  disc <- b^2 - 4*a*C
+return(disc)}
 ```
 
-```{r prepare-hillraces2, message = FALSE}
-hillraces_18 <- hillraces[-18,]
+```{r function4, exercise = TRUE, exercise.setup = "prepare-functionb"}
+
 ```
 
-```{r hillraces7, exercise = TRUE, exercise.setup = "prepare-hillraces2"}
-m_hillraces2 <-
+```{r function4-solution}
+discriminant(3, -8, 5)
 ```
 
-```{r hillraces7-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_hillraces2 <- lm(data = hillraces_18, time ~ dist + climb)
-```
-
-```{r hillraces7-check, message = FALSE, warning = FALSE}
+```{r function4-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Now what is the $r^2$?
+### Functions with Multiple Results
 
-```{r prepare-hillraces3, message = FALSE}
-hillraces_18 <- hillraces[-18,]
-m_hillraces2 <- lm(data = hillraces_18, time ~ dist + climb)
+There are also times where we want to create functions that produce multiple results. Unfortunately, `return()` only returns a single object. However, we can "trick" R into returning multiple results by combining them into one object. 
+
+For example, a quadratic equation  $ax^2 + bx + c$ has two roots. If we plugged in the coefficients into a function, we would want to see both of them--they are defined by 
+
+$$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$
+
+Below, I have written the outline of a function that returns both of the $x$ values in a vector. Fill in the rest of the function and solve for the roots of $3x^2 - 8x + 5$. 
+
+```{r function5, exercise = TRUE, exercise.setup = "prepare-functionb"}
+roots1 <- function(a, b, C){
+  x1 <-  
+  x2 <- 
+return(c(x1, x2))}
 ```
 
-```{r hillraces8, exercise = TRUE, exercise.setup = "prepare-hillraces3"}
-m_hillraces2 <-
+```{r function5-solution}
+roots1 <- function(a, b, C){
+  x1 <- (-b + sqrt(discriminant(a, b, C)))/(2*a) 
+  x2 <- (-b - sqrt(discriminant(a, b, C)))/(2*a) 
+return(c(x1, x2))}
+roots1(3, -8, 5)
 ```
 
-```{r hillraces8-solution, message = FALSE, warning = FALSE, echo = FALSE}
-summary(m_hillraces2)$r.squared
-```
-
-```{r hillraces8-check, message = FALSE, warning = FALSE}
+```{r function5-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-It turns out that observation 18, Knock Hill, should be recorded as 18 minutes (0.3) instead of 78 minutes, which is what it is now. Using the code below, fit a new model--name it `m_hillraces3`.
+Returning a single vector is a reasonable solution, but all you get out is the vector! You may not know or remember what the element of the vector represents--it just appears as a number--or, you may not remember where you stored a result.
 
-```{r hillraces9, exercise = TRUE, exercise.setup = "prepare-hillraces4"}
-hillraces$time[18] <- 0.3
+To solve this problem, we can return a list instead of a vector. A `list` in R can save multiple named objects that may be different types (numbers, character strings, vectors, matrices, etc.).
+
+Below, I have written the outline of a function that returns both of the solutions for a quadratic equation in a list. Fill in the rest of the function. 
+
+```{r function6, exercise = TRUE, exercise.setup = "prepare-functionb"}
+  x1 <- 
+  x2 <- 
+return(list(x1 = x1, x2 = x2))
 ```
 
-```{r prepare-hillraces4, message = FALSE}
-hillraces$time[18] <- 0.3
+```{r function6-solution}
+roots2 <- function(a, b, C){
+  x1 <- (-b + sqrt(discriminant(a, b, C)))/(2*a) 
+  x2 <- (-b - sqrt(discriminant(a, b, C)))/(2*a) 
+return(list(x1 = x1, x2 = x2))}
 ```
 
-```{r hillraces10, exercise = TRUE, exercise.setup = "prepare-hillraces4"}
-m_hillraces3 <-
-```
-
-```{r hillraces10-solution, message = FALSE, warning = FALSE, echo = FALSE}
-m_hillraces3 <- lm(data = hillraces, time ~ dist + climb)
-```
-
-```{r hillraces10-check, message = FALSE, warning = FALSE}
+```{r function6-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Recreate the residuals plot. Does this look more appropriate?
+Find the roots of the equation $5x^2 + 13x + 3$ using your second function, and save them in an object named `test`. 
 
-```{r prepare-hillraces5, message = FALSE}
-hillraces$time[18] <- 0.3
-m_hillraces3 <- lm(data = hillraces, time ~ dist + climb)
+```{r prepare-functionc, message = FALSE}
+discriminant <- function(a, b, C){
+  disc <- b^2 - 4*a*C
+return(disc)}
+
+roots2 <- function(a, b, C){
+  x1 <- (-b + sqrt(discriminant(a, b, C)))/(2*a) 
+  x2 <- (-b - sqrt(discriminant(a, b, C)))/(2*a) 
+return(list(x1 = x1, x2 = x2))}
 ```
 
-```{r hillraces11, exercise = TRUE, exercise.setup = "prepare-hillraces5"}
+```{r function7, exercise = TRUE, exercise.setup = "prepare-functionc"}
 
 ```
 
-```{r hillraces11-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(data = m_hillraces3, aes(x = .fitted, y = .resid)) +
+```{r function7-solution}
+test <- roots2(5, 13, 3)
+```
+
+```{r function7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, extract `x1` from `test` using the dollar sign, `$`. 
+
+```{r prepare-functiond, message = FALSE}
+discriminant <- function(a, b, C){
+  disc <- b^2 - 4*a*C
+return(disc)}
+
+roots2 <- function(a, b, C){
+  x1 <- (-b + sqrt(discriminant(a, b, C)))/(2*a) 
+  x2 <- (-b - sqrt(discriminant(a, b, C)))/(2*a) 
+return(list(x1 = x1, x2 = x2))}
+
+test <- roots2(5, 13, 3)
+```
+
+```{r function8, exercise = TRUE, exercise.setup = "prepare-functiond"}
+
+```
+
+```{r function8-solution}
+test$x1
+```
+
+```{r function8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Finally, extract `x2` from `test` using the dollar sign, `$`. 
+
+```{r function9, exercise = TRUE, exercise.setup = "prepare-functiond"}
+
+```
+
+```{r function9-solution}
+test$x2
+```
+
+```{r function9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### A Function for Residual Plots
+
+To recap, we created these plots by 
+
+1. Fitting the model,
+2. Creating and saving each plot, and
+3. Arranging the two plots. 
+
+This code appears in the chunk below. 
+
+```{r resids4, exercise = TRUE, exercise.setup = "prepare-model"}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)
+```
+
+If we place this code inside a function, we never have to redo it again! Instead, we can just apply the function. Try copying and pasting it all inside the brackets defining the function `residual_plots()`. 
+
+```{r resids5, exercise = TRUE, exercise.setup = "prepare-model"}
+residual_plots <- function(argument1, argument2, ...){
+  
+  calculations, calculations, calculations
+  
+  return(output)}
+```
+
+```{r resids5-solution}
+residual_plots <- function(argument1, argument2, ...){
+  
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You may notice that we haven't specified the arguments to the function! The way we have written the code, the only things we absolutely need is the dataset used and the formula. Add those arguments to the function. 
+
+```{r resids6, exercise = TRUE, exercise.setup = "prepare-model"}
+residual_plots <- function(argument1, argument2){
+  
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids6-solution}
+residual_plots <- function(dataset = dataset, formula = formula){
+  
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Notice now that the arguments in the function don't actually show up anywhere in the code! We need to adapt our model statement inside `lm()` to use these arguments. 
+
+```{r resids7, exercise = TRUE, exercise.setup = "prepare-model"}
+residual_plots <- function(dataset = dataset, formula = formula){
+  
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids7-solution}
+residual_plots <- function(dataset = dataset, formula = formula){
+  
+model1 <- lm(data = dataset, formula = formula)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now realize that we haven't actually returned anything--what's more, we don't have anything nice to return (at least, not the nice plot with all three diagnostics). Save the code in `ggarrange()`, and add a return statement. 
+
+```{r resids8, exercise = TRUE, exercise.setup = "prepare-model"}
+residual_plots <- function(dataset = dataset, formula = formula){
+  
+model1 <- lm(data = dataset, formula = formula)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids8-solution}
+residual_plots <- function(dataset = dataset, formula = formula){
+  
+model1 <- lm(data = dataset, formula = formula)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+output <- ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now you have a working function!! Note that if you want to use this function in your own work, you are welcome to do so. However, it doesn't magically appear--you will have to copy and paste this code into your RMarkdown documents before you can use it. 
+
+You can also adapt it to be a nicer function or to do different things if you so choose. Consider adding a red line through 0, nicer titles, etc.
+
+Now, apply this function to the current scenario, to make sure it works~
+
+```{r prepare-residplots, message = FALSE}
+residual_plots <- function(dataset = dataset, formula = formula){
+  
+model1 <- lm(data = dataset, formula = formula)
+
+residualplot <- ggplot(data = model1, aes(x = .fitted, y = .resid)) +
+  geom_point()
+
+qqplot <- ggplot(data = model1, aes(sample = .resid)) +
+   stat_qq() +
+   stat_qq_line() +
+   ggtitle("Residuals Q-Q")
+
+output <- ggarrange(residualplot, qqplot, nrow = 1, ncol = 2)  
+  return(output)}
+```
+
+```{r resids9, exercise = TRUE, exercise.setup = "prepare-residplots"}
+
+```
+
+```{r resids9-solution}
+residual_plots(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+```
+
+```{r resids9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+## Part 6: Case-Influence Statistics
+
+### Leverage
+
+To see if there are any influential points, calculate the leverage values for `model1`.
+
+```{r leverage1, exercise = TRUE, exercise.setup = "prepare-model"}
+
+```
+
+```{r leverage1-solution}
+hatvalues(model1)
+```
+
+```{r leverage1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Remember that the threshold for high and low leverage values depends on the number of data points and the number of coefficients in the model.
+
+It turns out that we can automatically extract the number of points using the `dim()` command. However, `dim()` returns a vector where the first value is the number of rows (corresponding to points). Using the square brackets, can you extract the first value?
+
+```{r threshold1, exercise = TRUE}
+dim(ex0327)
+```
+
+```{r threshold1-solution}
+dim(ex0327)[1]
+```
+
+```{r threshold1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You can also directly extract the number of coefficients from `model1` (and other models you might fit). This value is saved as `rank`. 
+
+```{r threshold2, exercise = TRUE, exercise.setup = "prepare-model"}
+model1$rank
+```
+
+```{r threshold3, echo=FALSE}
+question("The number of coefficients in the model is...",
+  answer("4", correct = TRUE),
+  answer("1"),
+  answer("2"),
+  answer("3"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Using these two values, calculate the threshold for high leverage values, $2\frac{p}{n}$.
+
+```{r leverage2, exercise = TRUE, exercise.setup = "prepare-model"}
+
+```
+
+```{r leverage2-solution}
+threshold <- 2*model1$rank/dim(ex0327)[1]
+threshold
+```
+
+```{r leverage2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now's the time to use logical operators, like `>` and `<`! Other operators include less than or equal to (`<=`), greater than or equal to (`>=`), equal to (`==`), and not equal to (`!=`), among others. They all work in very similar ways to `<` and `>`--to learn more logical operators, check out this [list](https://www.statmethods.net/management/operators.html).
+
+Again, we will focus on are `<` and `>`--we will use them to identify which points have high leverage values, studentized residuals, etc. Using the `which()` function, the calculated threshold, and a logical operator, write two lines of code to determine how many high leverage points there are and which rows they are in. 
+
+```{r prepare-model2, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+```
+
+```{r leverage3, exercise = TRUE, exercise.setup = "prepare-model2"}
+
+```
+
+```{r leverage3-solution}
+sum(hatvalues(model1) > threshold) 
+which(hatvalues(model1) > threshold)
+```
+
+```{r leverage3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You might be interested in showing high leverage points (or points with high valued studentized residuals or Cook's distance) on a scatterplot of the original data. This requires some extra work.
+
+`ggplot()` requires that your data is stored as a data frame. We can create this data frame using `data.frame()`. See the code below--it creates a data frame named `diagnostics`, containing `index` (the row numbers) and `m_leverage` (the leverage values from `model1`).
+
+```{r leverage4, exercise = TRUE, exercise.setup = "prepare-model2"}
+diagnostics <- data.frame(index = 1:dim(ex0327)[1], 
+                        m_leverage = hatvalues(model1))
+```
+
+Now that you have created the dataframe, you can easily make a scatterplot with `index` on the $x$-axis and `m_leverage` on the $y$-axis.
+
+```{r prepare-model3, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnostics <- data.frame(index = 1:dim(ex0327)[1], 
+                        m_leverage = hatvalues(model1))
+```
+
+```{r leverage5, exercise = TRUE, exercise.setup = "prepare-model3"}
+
+```
+
+```{r leverage5-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
   geom_point()
 ```
 
-```{r hillraces11-check, message = FALSE, warning = FALSE}
+```{r leverage5-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Re-run the hypothesis test. Is `dist` still a significant predictor?
+We can add a red line to represent the threshold with `geom_hline()`. You've done this before, but remember that `geom_hline()` accepts a `yintercept` argument to show exactly where the line should go and a `color` argument to make it red. 
 
-```{r hillraces12, exercise = TRUE, exercise.setup = "prepare-hillraces5"}
+```{r leverage6, exercise = TRUE, exercise.setup = "prepare-model3"}
 
 ```
 
-```{r hillraces12-solution, message = FALSE, warning = FALSE, echo = FALSE}
-summary(m_hillraces3)
+```{r leverage6-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  geom_hline(yintercept = threshold, color = "red")
 ```
 
-```{r hillraces12-check, message = FALSE, warning = FALSE}
+```{r leverage6-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
+
+To add one last feature to this graph, we can use the package `gghighlight`. As the name suggests, we can highlight certain points according to some condition defined with a logical operator (called a predicate). 
+
+Use the code from your last graph, and add the geom `gghighlight()` to the plot. Inside the parentheses, write a phrase that specifies what you are interested in--we want to see which values of `m_leverage` are greater than the stored `threshold` value.
+
+```{r leverage7, exercise = TRUE, exercise.setup = "prepare-model3"}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight() +
+  geom_hline(yintercept = threshold, color = "red") 
+```
+
+```{r leverage7-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold) + 
+  geom_hline(yintercept = threshold, color = "red") 
+```
+
+```{r leverage7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+In addition to the colors changing, we can label the points. The argument `label_key` dictates what the points are labeled with--in this case, we want to label each point with the `index` so we can find exactly what rows are problematic. Add the argument to see if you can label the points. 
+  
+```{r leverage8, exercise = TRUE, exercise.setup = "prepare-model3"}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = ) +
+  geom_hline(yintercept = threshold, color = "red") 
+```
+
+```{r leverage8-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) +
+  geom_hline(yintercept = threshold, color = "red")
+```
+
+```{r leverage8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+As a final touch, change the labels on the $x$ and $y$ axes to read `Index` and `Leverage`.
+
+```{r leverage9, exercise = TRUE, exercise.setup = "prepare-model3"}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) +
+  geom_hline(yintercept = threshold, color = "red")
+```
+
+```{r leverage9-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) +
+  geom_hline(yintercept = threshold, color = "red") + 
+  xlab("Index") + 
+  ylab("Leverage")
+```
+
+```{r leverage9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Studentized Residuals
+
+Now, let's take a look at the studentized residuals. Compute the values for `model1`. 
+
+```{r studentized1, exercise = TRUE, exercise.setup = "prepare-model3"}
+
+```
+
+```{r studentized1-solution}
+rstudent(model1)
+```
+
+```{r studentized1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using the `sum()` and `which()` functions, the calculated threshold, and a logical operator, write two lines of code to determine how many points with large studentized residuals there are and which rows they are in. 
+
+```{r studentized2, exercise = TRUE, exercise.setup = "prepare-model3"}
+
+```
+
+```{r studentized2-solution}
+sum(abs(rstudent(model1)) > 2)
+which(abs(rstudent(model1)) > 2)
+```
+
+```{r studentized2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="studentized2-hint">
+**Hint:** You may need to use the `abs()` function.   
+</div>
+
+Now, let's plot the studentized residuals. Instead of creating a brand new dataframe, add the residuals to the existing `diagnostics` dataframe in a new column labeled `m_studentized`.
+
+```{r studentized3, exercise = TRUE, exercise.setup = "prepare-model3"}
+
+```
+
+```{r studentized3-solution}
+diagnostics <- diagnostics %>%
+  mutate(m_studentized = rstudent(model1))
+```
+
+```{r studentized3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using the dataframe and `ggplot()`, create a scatterplot of the index on the $x$-axis and the studentized residuals on the $y$-axis.
+
+```{r prepare-model4, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnostics <- data.frame(index = 1:dim(ex0327)[1], 
+                        m_leverage = hatvalues(model1))
+
+diagnostics <- diagnostics %>%
+  mutate(m_studentized = rstudent(model1))
+```
+
+```{r studentized4, exercise = TRUE, exercise.setup = "prepare-model4"}
+
+```
+
+```{r studentized4-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point()
+```
+
+```{r studentized4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using `geom_hline()`, add two new red lines at -2 and 2 so we can identify the points with high studentized residuals.
+
+```{r studentized5, exercise = TRUE, exercise.setup = "prepare-model4"}
+
+```
+
+```{r studentized5-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point() + 
+  geom_hline(yintercept = 2, color = "red") + 
+  geom_hline(yintercept = -2, color = "red") 
+```
+
+```{r studentized5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Finally, use `gghighlight()` to label the points with high residuals.
+
+```{r studentized6, exercise = TRUE, exercise.setup = "prepare-model4"}
+
+```
+
+```{r studentized6-solution}
+ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point() + 
+  gghighlight(abs(m_studentized) > 2, label_key = index) +
+  geom_hline(yintercept = -2, color = "red") + 
+  geom_hline(yintercept = 2, color = "red")
+```
+
+```{r studentized6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Do the groups share any overlap?
+
+### Cook's Distance
+
+Finally, let's calculate the Cook's distance. Include code that will calculate how many points have high Cook's distance and which ones they are. 
+
+```{r cooks1, exercise = TRUE, exercise.setup = "prepare-model4"}
+
+```
+
+```{r cooks1-solution}
+cooks.distance(model1)
+sum(cooks.distance(model1) > 1)
+which(cooks.distance(model1) > 1)
+```
+
+```{r cooks1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Add a column with the Cook's distance named `m_cooks` to the `diagnostics` dataframe, and plot the index on the $x$-axis and the Cook's distance on the $y$-axis. 
+
+```{r cooks2, exercise = TRUE, exercise.setup = "prepare-model4"}
+
+```
+
+```{r cooks2-solution}
+diagnostics <- diagnostics %>%
+  mutate(m_cooks = cooks.distance(model1))
+
+ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+  geom_point() + 
+  gghighlight(m_cooks > 1, label_key = index) +
+  geom_hline(yintercept = 1, color = "red")
+```
+
+```{r cooks2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We know that statisticians typically like to consider all of these plots at once. You've seen the `ggarrange()` formula -- in the chunk below, save the plots you've just created as `leverage_plot`, `rstudentized_plot`, and `cooks_plot` (while you're at it, change the axis titles for all your plots). 
+
+```{r prepare-model5, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnostics <- data.frame(index = 1:dim(ex0327)[1], 
+                        m_leverage = hatvalues(model1))
+
+diagnostics <- diagnostics %>%
+  mutate(m_studentized = rstudent(model1))
+
+diagnostics <- diagnostics %>%
+  mutate(m_cooks = cooks.distance(model1))
+```
+
+```{r diagnostics1, exercise = TRUE, exercise.setup = "prepare-model5"}
+ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) + 
+  geom_hline(yintercept = threshold, color = "red") + 
+  xlab("Index") + 
+  ylab("Leverage")
+
+ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point() + 
+  gghighlight(abs(m_studentized) > 2, label_key = index) +
+  geom_hline(yintercept = -2, color = "red") + 
+  geom_hline(yintercept = 2, color = "red")
+
+ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+  geom_point() + 
+  gghighlight(m_cooks > 1, label_key = index) +
+  geom_hline(yintercept = 1, color = "red") 
+```
+
+```{r diagnostics1-solution}
+leverage_plot <- ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) + 
+  geom_hline(yintercept = threshold, color = "red") + 
+  xlab("Index") + 
+  ylab("Leverage")
+
+rstudentized_plot <- ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point() + 
+  gghighlight(abs(m_studentized) > 2, label_key = index) + 
+  geom_hline(yintercept = -2, color = "red") + 
+  geom_hline(yintercept = 2, color = "red") +
+  xlab("Index") + 
+  ylab("Studentized")
+
+cooks_plot <- ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+  geom_point() + 
+  gghighlight(m_cooks > 1, label_key = index) + 
+  geom_hline(yintercept = 1, color = "red") + 
+  xlab("Index") + 
+  ylab("Cook's D")
+```
+
+```{r diagnostics1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, using `ggarrange()`, plot the three plots all together (3 rows, 1 column).
+
+```{r prepare-model6, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnostics <- data.frame(index = 1:dim(ex0327)[1], 
+                        m_leverage = hatvalues(model1))
+
+diagnostics <- diagnostics %>%
+  mutate(m_studentized = rstudent(model1))
+
+diagnostics <- diagnostics %>%
+  mutate(m_cooks = cooks.distance(model1))
+
+leverage_plot <- ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) + 
+  geom_hline(yintercept = threshold, color = "red") + 
+  xlab("Index") + 
+  ylab("Leverage")
+
+rstudentized_plot <- ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point() + 
+  gghighlight(abs(m_studentized) > 2, label_key = index) + 
+  geom_hline(yintercept = -2, color = "red") + 
+  geom_hline(yintercept = 2, color = "red") +
+  xlab("Index") + 
+  ylab("Studentized")
+
+cooks_plot <- ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+  geom_point() + 
+  gghighlight(m_cooks > 1, label_key = index) + 
+  geom_hline(yintercept = 1, color = "red") + 
+  xlab("Index") + 
+  ylab("Cook's D")
+```
+
+```{r diagnostics2, exercise = TRUE, exercise.setup = "prepare-model6"}
+
+```
+
+```{r diagnostics2-solution}
+ggarrange(leverage_plot, rstudentized_plot, cooks_plot, nrow = 3, ncol = 1)
+```
+
+```{r diagnostics2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We can make this into a function as well! Using the same process, create a function named `diagnostics_plots()`.  To recap, we created *these* plots by 
+
+1. Fitting the model,
+2. Creating a data frame,
+3. Creating and saving each plot, and
+4. Arranging the two plots. 
+
+This code appears in the chunk below (although I have adapted the code for the data frame creation slightly). 
+
+```{r diagnostics3, exercise = TRUE, exercise.setup = "prepare-model6"}
+my.function <- function(argument1, argument2, ...){
+
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnostics <- data.frame(index = 1:dim(ex0327)[1], 
+                        m_leverage = hatvalues(model1),
+                        m_studentized = rstudent(model1),
+                        m_cooks = cooks.distance(model1))
+
+leverage_plot <- ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+  geom_point() + 
+  gghighlight(m_leverage > threshold, label_key = index) + 
+  geom_hline(yintercept = threshold, color = "red") + 
+  xlab("Index") + 
+  ylab("Leverage")
+
+rstudentized_plot <- ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+  geom_point() + 
+  gghighlight(abs(m_studentized) > 2, label_key = index) + 
+  geom_hline(yintercept = -2, color = "red") + 
+  geom_hline(yintercept = 2, color = "red") +
+  xlab("Index") + 
+  ylab("Studentized")
+
+cooks_plot <- ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+  geom_point() + 
+  gghighlight(m_cooks > 1, label_key = index) + 
+  geom_hline(yintercept = 1, color = "red") + 
+  xlab("Index") + 
+  ylab("Cook's D")
+
+  ggarrange(leverage_plot, rstudentized_plot, cooks_plot, nrow = 3, ncol = 1)
+
+  return(output)}
+```
+
+Now apply the function to your dataset, just to make sure it works!
+
+```{r prepare-model7, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnosticsplots <- function(dataset = dataset, formula = formula){
+
+  model1 <- lm(data = dataset, formula = formula )
+  threshold <- 2*model1$rank/dim(dataset)[1]
+
+  diagnostics <- data.frame(index = 1:dim(dataset)[1], 
+                          m_leverage = hatvalues(model1),
+                          m_studentized = rstudent(model1),
+                          m_cooks = cooks.distance(model1))
+
+  leverage_plot <- ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+    geom_point() + 
+    gghighlight(m_leverage > threshold, label_key = index) + 
+    geom_hline(yintercept = threshold, color = "red") + 
+    xlab("Index") + 
+    ylab("Leverage")
+
+  rstudentized_plot <- ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+    geom_point() + 
+    gghighlight(abs(m_studentized) > 2, label_key = index) + 
+    geom_hline(yintercept = -2, color = "red") + 
+    geom_hline(yintercept = 2, color = "red") +
+    xlab("Index") + 
+    ylab("Studentized")
+
+  cooks_plot <- ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+    geom_point() + 
+    gghighlight(m_cooks > 1, label_key = index) + 
+    geom_hline(yintercept = 1, color = "red") + 
+    xlab("Index") + 
+    ylab("Cook's D")
+
+  output <- ggarrange(leverage_plot, rstudentized_plot, cooks_plot, nrow = 3, ncol = 1)
+
+  return(output)}
+```
+
+```{r diagnostics4, exercise = TRUE, exercise.setup = "prepare-model7"}
+
+```
+
+```{r diagnostics4-solution}
+diagnosticsplots(data = ex0327, formula = logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+```
+
+```{r diagnostics4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+## Part 7: Deleting Cases
+
+It is clear from the three plots that case 34 is an influential point. Before we remove from the dataset, view the summary of `model1`. Are any of the coefficients significant?
+
+```{r summary1, exercise = TRUE, exercise.setup = "prepare-model7"}
+
+```
+
+```{r summary1-solution}
+summary(model1)
+```
+
+```{r summary1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, create a new dataframe named `ex0327_34` by using the square brackets to delete the $34^{th}$ row. 
+
+```{r delete, exercise = TRUE, exercise.setup = "prepare-model7"}
+
+```
+
+```{r delete-solution}
+ex0327_34 <- ex0327[-34,]
+```
+
+```{r delete-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="delete-hint">
+**Hint:** You can delete a row by using a negative sign in front of the row you want to eliminate.   
+</div>
+
+Refit the model without the $34^{th}$ observation (named `model2`) and view the summary.
+
+```{r prepare-model8, message = FALSE}
+model1 <- lm(data = ex0327, logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+threshold <- 2*model1$rank/dim(ex0327)[1]
+
+diagnosticsplots <- function(dataset = dataset, formula = formula){
+
+  model1 <- lm(data = dataset, formula = formula )
+  threshold <- 2*model1$rank/dim(dataset)[1]
+
+  diagnostics <- data.frame(index = 1:dim(dataset)[1], 
+                          m_leverage = hatvalues(model1),
+                          m_studentized = rstudent(model1),
+                          m_cooks = cooks.distance(model1))
+
+  leverage_plot <- ggplot(data = diagnostics, aes(x = index, y = m_leverage)) + 
+    geom_point() + 
+    gghighlight(m_leverage > threshold, label_key = index) + 
+    geom_hline(yintercept = threshold, color = "red") + 
+    xlab("Index") + 
+    ylab("Leverage")
+
+  rstudentized_plot <- ggplot(data = diagnostics, aes(x = index, y = m_studentized)) + 
+    geom_point() + 
+    gghighlight(abs(m_studentized) > 2, label_key = index) + 
+    geom_hline(yintercept = -2, color = "red") + 
+    geom_hline(yintercept = 2, color = "red") +
+    xlab("Index") + 
+    ylab("Studentized")
+
+  cooks_plot <- ggplot(data = diagnostics, aes(x = index, y = m_cooks)) + 
+    geom_point() + 
+    gghighlight(m_cooks > 1, label_key = index) + 
+    geom_hline(yintercept = 1, color = "red") + 
+    xlab("Index") + 
+    ylab("Cook's D")
+
+  output <- ggarrange(leverage_plot, rstudentized_plot, cooks_plot, nrow = 3, ncol = 1)
+
+  return(output)}
+
+ex0327_34 <- ex0327[-34,]
+```
+
+```{r summary2, exercise = TRUE, exercise.setup = "prepare-model8"}
+
+```
+
+```{r summary2-solution}
+model2 <- lm(ex0327_34, formula = logit(PollenRemoved) ~ DurationOfVisit*BeeType)
+summary(model2)
+```
+
+```{r summary2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Do the results of your analysis change? What is the best course of action?
+
+

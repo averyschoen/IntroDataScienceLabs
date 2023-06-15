@@ -6,748 +6,656 @@ runtime: shiny_prerendered
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(car)
 library(dplyr)
+library(GGally)
+library(gghighlight)
 library(ggplot2)
+library(ggpubr)
+library(gmodels)
 library(gradethis)
 library(learnr)
+library(multcomp)
 library(readr)
 tutorial_options(exercise.checker = gradethis::grade_learnr)
 
-CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv", stringsAsFactors = FALSE)
+Temperature <- c(53, 56, 57, 63, 66, 67, 67, 67, 
+                 68, 69, 70, 70, 70, 70, 72, 73, 
+                 75, 75, 76, 76, 78, 79, 80, 81)
+Failure <- c(1, 1, 1, 0, 0, 0, 0, 0, 
+             0, 0, 0, 1, 1, 1, 0, 0, 
+             0, 1, 0, 0, 0, 0, 0, 0)
 
-NMES1998 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/NMES1988.csv", stringsAsFactors = TRUE)
+challenger <- data.frame(Temperature, Failure)
 
-PSID1982 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/PSID1982.csv", stringsAsFactors = TRUE)
+model1 <- glm(Failure ~ Temperature, data = challenger, family = "binomial")
+
+model0 <- glm(Failure ~ 1, data = challenger, family = "binomial")
+
+newdata <- data.frame(Temperature = 31)
+
+Titanic <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/carData/TitanicSurvival.csv", stringsAsFactors = TRUE)
 ```
 
 ## Goals
 
-Your goal is to practice using the `lm()` command for linear regression, as well as the associated code (including creating residual plots). You will also be practicing incorporating categorical variables. 
+Your goal is to practice logistic regression and review $F$-tests. You will also learn some new skills, like adding logistic curves to graphs and omitting missing data from an analysis. 
 
 ## Part 1: Loading Packages
 
-Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `ggplot2`. We will also load the `dplyr` package so we can use some data manipulation functions. Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `car`, `GGally`, and `ggplot2`. Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
 
 ```{r loadpackages, exercise = T}
-library(dplyr)
+library(car)
+library(GGally)
 library(ggplot2)
 ```
 
 ## Part 2: Reading in Data
 
-Today, we will be using several different datasets to practice working with categorical variables and explore relationships using linear regression. These datasets, `CollegeDistance`, `NMES1998`, and `PSID1982`, are loaded below: 
+We will be using two different datasets today. One dataframe, `challenger`, is very similar to the example for permutation/randomization tests we saw in Week 2. However, instead of splitting the data into "above 65 degrees" and "below 65 degrees", we can use the temperature directly to predict if there was an o-ring failure or not. 
 
-```{r data, exercise = TRUE}
-CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv")
+Unlike many of the other datasets we have used, this data is not stored online (at least, not in the format that I wanted!). Thus, we will have to create it by hand. First, run the two lines defining `Temperature` and `Failure`.  
 
-NMES1998 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/NMES1988.csv",
-                     stringsAsFactors = TRUE)
 
-PSID1982 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/PSID1982.csv",
-                     stringsAsFactors = TRUE)
+```{r challengerdata1, exercise = T}
+Temperature <- c(53, 56, 57, 63, 66, 67, 67, 67, 
+                 68, 69, 70, 70, 70, 70, 72, 73, 
+                 75, 75, 76, 76, 78, 79, 80, 81)
+Failure <- c(1, 1, 1, 0, 0, 0, 0, 0, 
+             0, 0, 0, 1, 1, 1, 0, 0, 
+             0, 1, 0, 0, 0, 0, 0, 0)
 ```
 
-<div id="data-hint">
-**Hint:** Note the extra `stringsAsFactors` argument--this needs to be included to make some of our code work correctly!!
-</div>
 
-## Part 3: Categorical Variables
+Now, use the `data.frame()` command to put these two columns in a dataframe. Note that you can use `data.frame()` directly--no need to use `cbind()`. Name the data `challenger`.
 
-You may recall that categorical variables are often saved as factors in R. Let's practice working with them so that you are prepared to include them in a linear regression model for your project. 
-
-### `CollegeDistance`
-
-The `CollegeDistance` dataset includes data from a survey conducted by the US Department of Education in 1980 ([documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/CollegeDistance.html)). The survey includes students from about 1,100 high schools across the country.
-
-First, apply the `glimpse()` function to the dataset. 
-
-```{r collegedistance1, exercise = TRUE}
+```{r challengerdata2, exercise = TRUE}
 
 ```
 
-```{r collegedistance1-solution, message = FALSE, warning = FALSE, echo = FALSE}
-glimpse(CollegeDistance)
+```{r challengerdata2-solution}
+challenger <- data.frame(Temperature, Failure)
 ```
 
-```{r collegedistance1-check, message = FALSE, warning = FALSE}
+```{r challengerdata2-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-```{r collegedistance2, echo=FALSE}
-question("Looking at this dataset, which of the variables appear to be categorical? Select all that apply.",
-  answer("`X`"),
-  answer("`gender`", correct = TRUE),
-  answer("`ethnicity`", correct = TRUE),
-  answer("`score`"),
-  answer("`fcollege`", correct = TRUE),
-  answer("`mcollege`", correct = TRUE),
-  answer("`home`", correct = TRUE),
-  answer("`urban`", correct = TRUE),
-  answer("`unemp`"),
-  answer("`wage`"),
-  answer("`distance`"),
-  answer("`tuition`"),
-  answer("`education`"),
-  answer("`income`", correct = TRUE),
-  answer("`region`", correct = TRUE),
-  allow_retry = T
-)
+Another dataset we will be using is the ship's manifest from the [RMS Titanic](https://en.wikipedia.org/wiki/Titanic). There are several different versions of the `Titanic` dataset online. We will be using one that contains information on survival status (did the passenger survive the sinking of the Titanic?), sex (male or female), age (in years), and passenger class (first, second, or third--there are many other versions that contain information on crew members as well, and you can use one of those to see if your analyses change or not after class if you like).
+
+```{r titanicdata, exercise = TRUE}
+Titanic <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/carData/TitanicSurvival.csv", stringsAsFactors = TRUE)
 ```
 
-Take a closer look at the output from `glimpse()`. Do you see some gray output, in between the variable name and the values in the dataset? You may remember that this is a description of how the variable is saved in R. Even though we know that `gender`, `ethnicity`, `fcollege`, `mcollege`, `home`, `urban`, `income`, and `region` are categorical and therefore should be saved as factors (`<fct>`), all we can see is gray output indicating that they are all saved as character strings (`<chr>`). Character strings can be useful but are beyond the scope of this class--we need to know how to change the storage type of the variables!
+## Part 3: Challenger
 
-First, let's confirm what we already know--`fcollege`, which describes whether a student's father attended college, is NOT saved as a factor. We can do this using the `is.factor()` function. 
+Recall that the *Challenger* space shuttle was scheduled to launch from the Kennedy Space Center on January 27, 1986, with 7 crew members aboard (including a civilian schoolteacher). The night before the launch, engineers at the company that built the shuttle warned the National Aeronautics and Space Administration (NASA) scientists that the shuttle **should not be launched** because of predicted cold weather. O-ring fuel seal problems, which had been encountered in earlier flights, were suspected of being associated with low temperatures; however, it was argued that the evidence was inconclusive.
 
-```{r collegedistance3, exercise = TRUE}
-is.factor()
+The decision was made to launch the shuttle, though the temperature at launch time was 29$^{\circ}$ Fahrenheit. Sadly, 73 seconds into its flight, the *Challenger* broke apart, killing all seven crew members on board. 
+
+Previously, we used a permutation test to look at this data. However, all we had was "`Below65"` and `"Above65"`--now that we have the actual temperatures, we can use logistic regression instead. 
+
+### Data Exploration
+
+Review the summary statistics for the `challenger` dataset.
+
+```{r challengersummary, exercise = TRUE}
+
 ```
 
-```{r collegedistance3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-is.factor(CollegeDistance$fcollege)
+```{r challengersummary-solution}
+summary(challenger)
 ```
 
-```{r collegedistance3-check, message = FALSE, warning = FALSE}
+```{r challengersummary-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-<div id="collegedistance3-hint">
-**Hint:** Don't forget to use the dollar sign operator to look specifically at `fcollege` inside the `CollegeDistance` dataframe.
-</div>
+Create a scatterplot with `Temperature` on the $x$-axis and `Failure` on the $y$-axis. 
 
-If you don't want to use `glimpse()`, you can check a particular factor with `is.factor()`. As we know, `fcollege` is not saved as a factor--but we can force it to be saved as a factor with `as.factor()`. 
-
-```{r collegedistance4, exercise = TRUE}
-CollegeDistance <- CollegeDistance %>%
-  mutate(fcollege = as.factor(fcollege))
-```
-
-This code resaves the CollegeDistance dataset with a "factor version" of `fcollege`. Double check that `fcollege` is now a factor with both the `glimpse()` and `is.factor()` functions. 
-
-```{r prepare-collegedistancea, message = FALSE}
-CollegeDistance <- CollegeDistance %>%
-  mutate(fcollege = as.factor(fcollege))
-```
-
-```{r collegedistance5, exercise = TRUE, exercise.setup = "prepare-collegedistancea"}
-glimpse()
-is.factor()
-```
-
-```{r collegedistance5-solution}
-glimpse(CollegeDistance)
-is.factor(CollegeDistance$fcollege)
-```
-
-```{r collegedistance5-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Yay, it worked! But... all of the other categorical variables are still saved as character strings. You would have to change them all individually--or we can revisit the function we used to read the data in. 
-
-```{r collegedistance6, exercise = TRUE}
-CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv")
-```
-
-Let's add an argument, `stringsAsFactors = TRUE`, to the `read.csv()` function. This argument tells R to automatically treat any variable saved as a character string to be a factor instead! When you read your data in for the final project, make sure to include this argument. 
-
-```{r collegedistance7, exercise = TRUE}
-CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv",
-                            stringsAsFactors = TRUE)
-```
-
-Now apply the `glimpse()` function again. 
-
-```{r prepare-collegedistanceb, message = FALSE}
-CollegeDistance <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/AER/CollegeDistance.csv",
-                            stringsAsFactors = TRUE)
-```
-
-```{r collegedistance8, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
+```{r challengerplot1, exercise = TRUE}
 
 ```
 
-```{r collegedistance8-solution}
-glimpse(CollegeDistance)
-```
-
-```{r collegedistance8-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-Now we're ready to work with categorical variables. First, apply the `levels()` function to the variable `fcollege`. 
-
-```{r collegedistance9, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
-levels()
-```
-
-```{r collegedistance9-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(CollegeDistance$fcollege)
-```
-
-```{r collegedistance9-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-<div id="collegedistance9-hint">
-**Hint:** Don't forget to use the dollar sign operator to look specifically at `fcollege` inside the `CollegeDistance` dataframe.
-</div>
-
-Remember that the levels of a categorical variable are all of the possible values it can take. 
-
-```{r collegedistance10, echo=FALSE}
-question("What are the levels of `fcollege`? Select all that apply.",
-  answer("`male`"),
-  answer("`female`"),
-  answer("`no`", correct = TRUE),
-  answer("`yes`", correct = TRUE),
-  answer("`fcollege`"),
-  answer("`1`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Remember also that in simple linear regression, we need to know what the reference level is. There is no function in R to find the reference level, but you can revisit the `levels()` output--the value that comes first is the reference. 
-
-```{r collegedistance11, echo=FALSE}
-question("What is the reference level of `fcollege`?",
-  answer("`male`"),
-  answer("`female`"),
-  answer("`no`", correct = TRUE),
-  answer("`yes`"),
-  answer("`fcollege`"),
-  answer("`1`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Now look at the levels of `gender`. 
-
-```{r collegedistance12, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
-levels()
-```
-
-```{r collegedistance12-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(CollegeDistance$gender)
-```
-
-```{r collegedistance12-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r collegedistance13, echo=FALSE}
-question("What is the reference level of `gender`?",
-  answer("`male`"),
-  answer("`female`", correct = TRUE),
-  answer("`no`"),
-  answer("`yes`"),
-  answer("`fcollege`"),
-  answer("`1`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Now look at the levels of `ethnicity`. 
-
-```{r collegedistance16, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
-levels()
-```
-
-```{r collegedistance16-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(CollegeDistance$ethnicity)
-```
-
-```{r collegedistance16-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-This variable has three levels!! But the same rule of thumb for finding the reference level applies.
-
-```{r collegedistance17, echo=FALSE}
-question("What is the reference level of `ethnicity`?",
-  answer("`afam`", correct = TRUE),
-  answer("`hispanic`"),
-  answer("`other`"),
-  answer("`yes`"),
-  answer("`no`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Now look at the levels of `income`. 
-
-```{r collegedistance18, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
-levels()
-```
-
-```{r collegedistance18-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(CollegeDistance$income)
-```
-
-```{r collegedistance18-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r collegedistance19, echo=FALSE}
-question("What is the reference level of `income`?",
-  answer("`afam`"),
-  answer("`hispanic`"),
-  answer("`other`"),
-  answer("`high`", correct = TRUE),
-  answer("`low`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Finally, look at the levels of `region`. 
-
-```{r collegedistance20, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
-levels()
-```
-
-```{r collegedistance20-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(CollegeDistance$region)
-```
-
-```{r collegedistance20-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r collegedistance21, echo=FALSE}
-question("What is the reference level of `region`?",
-  answer("`afam`"),
-  answer("`hispanic`"),
-  answer("`other`", correct = TRUE),
-  answer("`west`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Maybe you noticed a trend in these answers--another helpful hint is that typically (although NOT ALWAYS), the reference level is the level that comes first either alphabetically ("o" for *other* comes before "w" for *west*), or numerically (which you might see in future datasets).
-
-### `NMES1998 `
-
-The `NMES1998 ` dataset includes data from the US National Medical Expenditure Survey (NMES) conducted in 1987 and 1988 [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/NMES1988.html). The survey includes data on individuals older than 66 covered by Medicare, a public insurance program for the elderly. 
-
-First, apply the `glimpse()` function to the dataset. 
-
-```{r NMES1, exercise = TRUE}
-
-```
-
-```{r NMES1-solution, message = FALSE, warning = FALSE, echo = FALSE}
-glimpse(NMES1998)
-```
-
-```{r NMES1-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r NMES2, echo=FALSE}
-question("Looking at this dataset, which of the variables appear to be categorical? Select all that apply.",
-  answer("`X`"),
-  answer("`visits`"),
-  answer("`nvisits`"),
-  answer("`ovisits`"),
-  answer("`novisits`"),
-  answer("`emergency`"),
-  answer("`hospital`"),
-  answer("`health`", correct = TRUE),
-  answer("`chronic`"),
-  answer("`adl`", correct = TRUE),
-  answer("`region`", correct = TRUE),
-  answer("`age`"),
-  answer("`afam`", correct = TRUE),
-  answer("`gender`", correct = TRUE),
-  answer("`married`", correct = TRUE),
-  answer("`school`"),
-  answer("`income`"),
-  answer("`employed`", correct = TRUE),
-  answer("`insurance`", correct = TRUE),
-  answer("`medicaid`", correct = TRUE),
-  allow_retry = T
-)
-```
-
-Notice that all of these are already saved as factors--because we preemptively used `stringsAsFactors = TRUE` in Part 2, when we loaded the data.
-
-First, apply the `levels()` function to the variable `nvisits`. 
-
-```{r NMES3, exercise = TRUE}
-levels()
-```
-
-```{r NMES3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(NMES1998$nvisits)
-```
-
-```{r NMES3-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-<div id="NMES3-hint">
-**Hint:** Don't forget to use the dollar sign operator to look specifically at `nvisits` inside the `NMES1998` dataframe.
-</div>
-
-There are no levels here, because `nvisits` is not a categorical variable/factor! This is what you should expect to see if you apply `levels()` to a variable that isn't saved correctly.
-
-Now look at the levels of `health`. 
-
-```{r NMES4, exercise = TRUE, exercise.setup = "prepare-collegedistanceb"}
-levels()
-```
-
-```{r NMES4-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(NMES1998$health)
-```
-
-```{r NMES4-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r NMES5, echo=FALSE}
-question("What is the reference level of `health`?",
-  answer("`excellent`"),
-  answer("`poor`"),
-  answer("`average`", correct = TRUE),
-  answer("`yes`"),
-  answer("`no`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-Here, we see an example where we might want to change the reference level. Sometimes, people like to save their reference level in a sort of order (remember, there are such thing as ordinal variables). Here, the levels of `health` are listed as `"average"`, `"excellent"`, and `"poor"`, but if we order them, it might look more like `"poor"`, `"average"`, and `"excellent"`. We won't work with ordered factors here, but to see how to change the reference level, see the following example:
-
-```{r NMES6, exercise = TRUE}
-NMES1998 <- NMES1998 %>%
-  mutate(health = relevel(health, ref = "poor"))
-
-levels(NMES1998$health)
-```
-
-Now look at the levels of `region``. 
-
-```{r NMES7, exercise = TRUE}
-levels()
-```
-
-```{r NMES7-solution, message = FALSE, warning = FALSE, echo = FALSE}
-levels(NMES1998$region)
-```
-
-```{r NMES7-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r NMES8, echo=FALSE}
-question("What is the reference level of `region`?",
-  answer("`midwest`", correct = TRUE),
-  answer("`northeast`"),
-  answer("`other`"),
-  answer("`west`"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-
-
-
-## Part 4: Investigating Slopes and Intercepts
-
-The `PSID1982 ` dataset includes data from a panel study on Income Dynamics in 1982. [documentation here](https://vincentarelbundock.github.io/Rdatasets/doc/AER/PSID1982.html). 
-
-First, apply the `glimpse()` function to the dataset. 
-
-```{r PSID1, exercise = TRUE}
-
-```
-
-```{r PSID1-solution, message = FALSE, warning = FALSE, echo = FALSE}
-glimpse(PSID1982)
-```
-
-```{r PSID1-check, message = FALSE, warning = FALSE}
-grade_code()
-```
-
-```{r PSID2, echo=FALSE}
-question("Looking at this dataset, which of the variables appear to be categorical? Select all that apply.",
-  answer("`X`"),
-  answer("`experience`"),
-  answer("`weeks`"),
-  answer("`occupation`", correct = TRUE),
-  answer("`industry`", correct = TRUE),
-  answer("`south`", correct = TRUE),
-  answer("`smsa`", correct = TRUE),
-  answer("`married`", correct = TRUE),
-  answer("`gender`", correct = TRUE),
-  answer("`union`", correct = TRUE),
-  answer("`education`"),
-  answer("`ethnicity`", correct = TRUE),
-  answer("`wage`"),
-  allow_retry = T
-)
-```
-
-Using `ggplot()`, create a scatterplot predicting `wage` from `experience`. 
-
-```{r PSID3, exercise = TRUE}
-
-```
-
-```{r PSID3-solution, message = FALSE, warning = FALSE, echo = FALSE}
-ggplot(data = PSID1982, aes(x = experience, y = wage)) + 
+```{r challengerplot1-solution}
+ggplot(data = challenger, aes(x = Temperature, y = Failure)) + 
   geom_point()
 ```
 
-```{r PSID3-check, message = FALSE, warning = FALSE}
+```{r challengerplot1-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Check out the point near $(22, 5100)$. 
+Now, add a line to the plot using `geom_smooth()`. Does it look reasonable to use linear models to describe the data?
 
-```{r PSID4, echo=FALSE}
-question("Is this point an outlier, high leverage, or influential?",
-  answer("Outlier", correct = TRUE),
-  answer("High Leverage", message = "The point is far away from the dataset, but not in the $x$-direction!"),
-  answer("Influential", message = "The point is far away from the dataset, but removing it is not likely to change anything about the line!"),
-  answer("None of the above"),
-  allow_retry = T
-)
+```{r challengerplot2, exercise = TRUE}
+
 ```
 
-```{r PSID5, echo=FALSE}
-question("Describe the scatter plot in terms of its form, direction, strength, and unusual values.",
-  answer("Linear", correct = TRUE),
-  answer("Nonlinear", message = "It can be described best by a flat line--but a flat line is still a line!"),
-  answer("Positive", correct = TRUE),
-  answer("Negative"),
-  answer("Strong"), 
-  answer("Moderate"), 
-  answer("Weak", correct = TRUE), 
-  answer("Unusual values", correct= TRUE), 
-  answer("No unusual values"),
-  allow_retry = T
-)
+```{r challengerplot2-solution}
+ggplot(data = challenger, aes(x = Temperature, y = Failure)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) 
 ```
 
-Now, fit a linear model `model1` predicting `wage` from `experience`.
-
-```{r PSID6, exercise = TRUE}
-model1
-```
-
-```{r PSID6-solution, message = FALSE, warning = FALSE, echo = FALSE}
-model1 <- lm(data = PSID1982, formula = wage ~ experience)
-```
-
-```{r PSID6-check, message = FALSE, warning = FALSE}
+```{r challengerplot2-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-View the summary of `model1`. 
+Instead of a line, we can add the logistic equation to the plot. We need to specify that the `method` is `"glm"` instead of `"lm"`, and we also need to state which type of generalized linear model (the logistic). To do this, we need to use an argument called `method.args`--I have included the correct code in the chunk below. Hopefully, you can see that the logistic regression model looks much more appropriate than the linear regression model. 
 
-```{r prepare-PSIDa, message = FALSE}
-model1 <- lm(data = PSID1982, formula = wage ~ experience)
+```{r challengerplot3, exercise = TRUE}
+ggplot(data = challenger, aes(x = Temperature, y = Failure)) + 
+  geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
 ```
 
-```{r PSID7, exercise = TRUE, exercise.setup = "prepare-PSIDa"}
+### Model Fitting
+
+Fit a linear model, named `model1`, predicting `Failure` from `Temperature`. Use the summary to write the equation describing this model.
+
+```{r model1, exercise = TRUE}
 
 ```
 
-```{r PSID7-solution}
+```{r model1-solution}
+model1 <- glm(Failure ~ Temperature, data = challenger, family = "binomial")
 summary(model1)
 ```
 
-```{r PSID7-check, message = FALSE, warning = FALSE}
+```{r model1-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-```{r PSID8, echo=FALSE}
-question("What is the intercept of this model?",
-  answer("1046.608", correct = TRUE), 
-  answer("4.438"), 
-  answer("50.865"), 
-  answer("0.0278"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
+What is the AIC from this model? Do we know if this is good or bad?
+
+```{r prepare-ChallengerA, message = FALSE}
+model1 <- glm(Failure ~ Temperature, data = challenger, family = "binomial")
 ```
 
-```{r PSID9, echo=FALSE}
-question("What is the slope of this model?",
-  answer("2.205"), 
-  answer("4.438", correct = TRUE), 
-  answer("2.013"), 
-  answer("0.0278"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-```{r PSID10, echo=FALSE}
-question("What are the correct hypotheses for testing if there is a relationship between `wage` and `experience`?",
-  answer("$H_0: \\beta_1 = 0$ vs. $H_0: \\beta_1 \\neq 0$", correct = TRUE), 
-  answer("$H_0: \\beta_1 \\neq 0$ vs. $H_0: \\beta_1 = 0$", message = "Remember that the claim we want to prove goes in the alternative hypothesis!"), 
-  answer("$H_0: b_1 = 0$ vs. $H_0: b \\neq 0$", message = "This is a hypothesis about statistics, not parameters!"), 
-  answer("$H_0: \\beta_0 = 0$ vs. $H_0: \\beta_0 \\neq 0$", message = "This is a hypothesis about the intercept, not the slope!"),
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-```{r PSID11, echo=FALSE}
-question("Is there evidence of a significant relationship between `wage` and `experience` at the 5% level?",
-  answer("Yes, because the p-value is less than 0.05.", correct = TRUE), 
-  answer("No, because the p-value is less than 0.05."), 
-  answer("Yes, because the p-value is greater than 0.05."), 
-  answer("No, because the p-value is greater than 0.05."), 
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-```{r PSID12, echo=FALSE}
-question("What would a Type II error be in this case?",
-  answer("Claiming there is no relationship between `wage` and `experience` when there really is a relationship between `wage` and `experience`.", correct = TRUE), 
-  answer("Claiming there is a relationship between `wage` and `experience` when there really is a relationship between `wage` and `experience`.", message = "This is not an error!"), 
-  answer("Claiming there is no relationship between `wage` and `experience` when there really is not a relationship between `wage` and `experience`.", message = "This is not an error!"), 
-  answer("Claiming there is a relationship between `wage` and `experience` when there really is not a relationship between `wage` and `experience`.", message = "This is a Type I error!"), 
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-```{r PSID13, echo=FALSE}
-question("Could you have made a Type II error?",
-  answer("No, because I rejected the null hypothesis.", correct = TRUE), 
-  answer("No, because I did not reject the null hypothesis."), 
-  answer("Yes, because I rejected the null hypothesis."), 
-  answer("Yes, because I did not the null hypothesis."), 
-  allow_retry = T, 
-  random_answer_order = TRUE
-)
-```
-
-```{r PSID14, echo=FALSE}
-question("What is the proportion of variance in `wage` that can be explained by `experience`?",
-  answer("0.8131%", correct = TRUE), 
-  answer("0.6459%"), 
-  answer("2.8700%"), 
-  answer("<2e-14%"),
-  allow_retry = T
-)
-```
-
-Create a residual plot for the model. Is there evidence that a linear model is appropriate for this data?
-
-```{r PSID15, exercise = TRUE, exercise.setup = "prepare-PSIDa"}
+```{r model1aic, exercise = TRUE, exercise.setup = "prepare-ChallengerA"}
 
 ```
 
-```{r PSID15-solution}
-ggplot(data = model1, aes(x = .fitted, y = .resid)) + 
-         geom_point()
+```{r model1aic-solution}
+model1$aic
 ```
 
-```{r PSID15-check, message = FALSE, warning = FALSE}
+```{r model1aic-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-As you can see, this model isn't very good (the $R^2$ is very close to 0). Let's add a categorical variable to see if we can improve the relationship. 
+<div id="model1aic-hint">
+**Hint:** You won't know if the AIC is good or bad until you have another value, from another model, to compare it with!     
+</div>
 
-First, let's take another look at the original scatterplot. One way to visualize a categorical variable is to change the color of the points according to the levels. We haven't done this a while, but remember, it can be done by adding a `color = ` statement to `aes()`. Change the color of the points according to the variable `occupation`. Describe the relationship between all three variables. 
+### Investigating Slope
 
-```{r PSID16, exercise = TRUE, exercise.setup = "prepare-PSIDa"}
+Interpret the slope of `model1`. How do the odds change if the temperature increases by one degree?
+
+```{r model1slope1, exercise = TRUE, exercise.setup = "prepare-ChallengerA"}
 
 ```
 
-```{r PSID16-solution}
-ggplot(data = PSID1982, aes(x = experience, y = wage, color = occupation)) + 
-  geom_point()
+```{r model1slope1-solution}
+exp(-0.17132)
 ```
 
-```{r PSID16-check, message = FALSE, warning = FALSE}
+```{r model1slope1-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-Now, add the categorical variable to the model. Save it as `model2`.  
+Find a confidence interval for the slope of this logistic model.
 
-```{r PSID17, exercise = TRUE}
-model2
+```{r model1slope2, exercise = TRUE, exercise.setup = "prepare-ChallengerA"}
+
 ```
 
-```{r PSID17-solution, message = FALSE, warning = FALSE, echo = FALSE}
-model2 <- lm(data = PSID1982, formula = wage ~ experience + occupation)
+```{r model1slope2-solution}
+confint(model1)
 ```
 
-```{r PSID17-check, message = FALSE, warning = FALSE}
+```{r model1slope2-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-View the summary of `model2`. 
+Notice that in this case we only care if *lower temperatures* are associated with increased probability of failure--that is, if the slope of the model is negative. Thus, we need a one-sided, lower-tailed probability. By default, `summary()` returns two-sided probabilities. However, we can use the `pnorm()` equation to find the one-sided p-value we need.
 
-```{r prepare-PSIDb, message = FALSE}
-model2 <- lm(data = PSID1982, formula = wage ~ experience + occupation)
-```
+Calculate the one-sided, lower-tailed p-value. Is there evidence that the slope of the model is negative?
 
-```{r PSID18, exercise = TRUE, exercise.setup = "prepare-PSIDb"}
+```{r pvalue, exercise = TRUE, exercise.setup = "prepare-ChallengerA"}
 
 ```
 
-```{r PSID18-solution}
-summary(model2)
+```{r pvalue-solution}
+pnorm(-2.053, mean = 0, sd = 1, lower.tail = TRUE)
 ```
 
-```{r PSID18-check, message = FALSE, warning = FALSE}
+```{r pvalue-check, message = FALSE, warning = FALSE}
 grade_code()
 ```
 
-```{r PSID19, echo=FALSE}
-question("What appears to be the reference level of `occupation`?",
-  answer("`blue`", correct = TRUE), 
-  answer("`white`"), 
-  answer("There is no way to tell."), 
-  allow_retry = T, 
-  random_answer_order = T
+### Drop in Deviance Testing
+
+Now, fit a model predicting o-ring success/failure from the intercept alone. Call the model `model0`. 
+
+```{r model0, exercise = TRUE, exercise.setup = "prepare-ChallengerA"}
+
+```
+
+```{r model0-solution}
+model0 <- glm(Failure ~ 1, data = challenger, family = "binomial")
+summary(model0)
+```
+
+```{r model0-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="model0-hint">
+**Hint:** You should use the formula `Failure ~ 1` to fit this model..     
+</div>
+
+What is the AIC of this new model? How does it compare to the previous model?
+
+```{r prepare-ChallengerB, message = FALSE}
+model1 <- glm(Failure ~ Temperature, data = challenger, family = "binomial")
+model0 <- glm(Failure ~ 1, data = challenger, family = "binomial")
+```
+
+```{r model0aic, exercise = TRUE, exercise.setup = "prepare-ChallengerB"}
+
+```
+
+```{r model0aic-solution}
+model0$aic
+```
+
+```{r model0aic-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Recall that we can test to see if the "drop in deviance" between the two models is statistically significant. We will run through this test twice--once "by hand", and once with a pre-written R routine. 
+
+First, we need the `deviance` from each model. 
+
+```{r deviance1, exercise = TRUE, exercise.setup = "prepare-ChallengerB"}
+
+```
+
+```{r deviance1-solution}
+model1$deviance
+model0$deviance
+```
+
+```{r deviance1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, we can calculate the test statistic, or the "drop in deviance", by subtracting one model's deviance from the other. Calculate the test statistic (the reduced model goes first). 
+
+```{r LRT1, exercise = TRUE, exercise.setup = "prepare-ChallengerB"}
+
+```
+
+```{r LRT1-solution}
+model0$deviance - model1$deviance
+```
+
+```{r LRT1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We know the "drop in deviance" is distributed according to the $\chi^2$ distribution, where the degrees of freedom parameter is the difference in the model coefficients. 
+
+```{r threshold3, echo=FALSE}
+question("What are the degrees of freedom for this test?",
+  answer("1", correct = TRUE),
+  answer("0"),
+  answer("2"),
+  answer("3"),
+  allow_retry = T,
+  random_answer_order = TRUE
 )
 ```
 
-```{r PSID20, echo=FALSE}
-question("How would you interpret the estimate of the slope for `occupation`?",
-  answer("On average, white collar workers make $406.58 more than blue collar workers.", correct = TRUE), 
-  answer("On average, blue collar workers make $406.58 more than white collar workers."), 
-  answer("For every one-year increase in experience, white collar workers are expected to make an additional $406.58."), 
-  answer("When a worker has 0 years in experience, they can be expected to make $406.58."),
-  allow_retry = T, 
-  random_answer_order = T
-)
+Now, use the `pchisq` formula to calculate the p-value. 
+
+```{r LRT2, exercise = TRUE, exercise.setup = "prepare-ChallengerB"}
+
 ```
 
-```{r PSID21, echo=FALSE}
-question("What is the adjusted $R^2$ for this model?",
-  answer("0.1534"), 
-  answer("0.1505", correct = TRUE), 
-  answer("0.0008"), 
-  answer("<2e-16"),
-  allow_retry = T, 
-  random_answer_order = T
-)
+```{r LRT2-solution}
+pchisq(model0$deviance - model1$deviance, df = 1, lower.tail = FALSE)
 ```
 
-```{r PSID22, echo=FALSE}
-question("Which model would you end up choosing? Why?",
-  answer("`model1`, because the $R^2$ is smaller"), 
-  answer("`model1`, because the adjusted $R^2$ is smaller"), 
-  answer("`model2`, because the adjusted $R^2$ is bigger.", correct = TRUE), 
-  answer("`model2`, because the $R^2$ is bigger."),
-  allow_retry = T
-)
+```{r LRT2-check, message = FALSE, warning = FALSE}
+grade_code()
 ```
+
+<div id="LRT2-hint">
+**Hint:** Remember, all p-values from the $\chi^2$ distribution are upper-tailed! 
+</div>
+
+Alternatively, we can run this test using `anova()`. However, we need to specify that the test is based off of the likelihood ratio test, not the $F$-distribution. Carry out the test--does it match your hand calculations?
+
+```{r LRT3, exercise = TRUE, exercise.setup = "prepare-ChallengerB"}
+
+```
+
+```{r LRT3-solution}
+anova(model0, model1, test = "LRT")
+```
+
+```{r LRT3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Predictions
+
+The temperature at the time of launch was 31 degrees. First, create a dataframe called `newdata` where `Temperature` is equal to 31.
+
+```{r predict1, exercise = TRUE, exercise.setup = "prepare-ChallengerB"}
+
+```
+
+```{r predict1-solution}
+newdata <- data.frame(Temperature = 31)
+```
+
+```{r predict1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using the `newdata`, predict the probability of o-ring failure using `model1`.
+
+```{r prepare-ChallengerC, message = FALSE}
+model1 <- glm(Failure ~ Temperature, data = challenger, family = "binomial")
+model0 <- glm(Failure ~ 1, data = challenger, family = "binomial")
+
+newdata <- data.frame(Temperature = 31)
+```
+
+```{r predict2, exercise = TRUE, exercise.setup = "prepare-ChallengerC"}
+
+```
+
+```{r predict2-solution}
+predict(model1, newdata = newdata, type = "response")
+```
+
+```{r predict2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Can we trust this prediction? Why or why not?
+
+## Part 4: Titanic
+
+The *R.M.S. Titanic*, a British passenger liner, left on its maiden voyage from Southampton, England, on April 10, 1912. There were approximately 1,309 passengers (an exact list does not exist), along with 885 crew members. 
+
+The *Titanic* was the largest ship afloat at the time and was popularly known to be "unsinkable" due to brand new technology. However, late on April 14, the starboard side of the *Titanic* struck an iceberg, and water began to seep into the ship. The *Titanic* sunk early in the hours of April 15, less than three hours later, killing over 1,500 passengers and crew. 
+
+In general, the "women and children first" policy was followed when loading the *Titanic's* lifeboats, although over 500 seats on the boats remained. We will use the ship's roster to determine if `sex` and `age` had a statistically significant effect on the probability that a passenger survived the disaster.
+
+### Data Exploration
+
+Report the summary statistics for the `titanic` dataframe. Are there any variables that we should not use?
+
+```{r titanicsummary, exercise = TRUE}
+
+```
+
+```{r titanicsummary-solution}
+summary(Titanic)
+```
+
+```{r titanicsummary-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We will also need the number of passengers on the *Titanic* for later--use the `dim()` command to confirm that there are 1,309 passengers.
+
+```{r titanicn, exercise = TRUE}
+
+```
+
+```{r titanicn-solution}
+dim(Titanic)
+```
+
+```{r titanicn-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Missing Data
+
+You may have noticed that there is an extra row in the summary for the `age` variable--there are 263 `NA` values reported. At the time of the *Titanic's* voyage, there was no such thing as an official manifest, or list, of passengers. All of the data we have was collected post-sinking, and it was actually very difficult to find the values--thus, many of the ages are missing. 
+
+`NA` is a special value that R uses to indicate that there is no value/the value is missing. There is an entire suite of functions to deal with missing values. One such function is `is.na()`, which will return a `TRUE` if the value is missing and a `FALSE` if the value is present.
+
+Use a combination of the `sum()` and `is.na()` functions on `Titanic$age` to confirm that there are 263 missing values of age. 
+
+```{r titanicna1, exercise = TRUE}
+
+```
+
+```{r titanicna1-solution}
+sum(is.na(Titanic$age) == TRUE)
+```
+
+```{r titanicna1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+One rule of thumb regarding missing data is to ignore a variable (by not using it for the model) if it is 25-30\% missing. What percent of the `age` variable from `Titanic` is missing? If less than 25-30\%, we can use the variable, with caution.
+
+```{r titanicna2, exercise = TRUE}
+
+```
+
+```{r titanicna2-solution}
+sum(is.na(Titanic$age) == TRUE)/dim(Titanic)[1]
+```
+
+```{r titanicna2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+There are other ways to deal with missing data, but for now, we will exclude rows with missing values from our analysis. We will learn three methods. The first two use square bracket syntax, and the last uses `dplyr` syntax.
+
+First, save which values are missing in an object named `omit` (use the `which()` function). Then, use the square brackets `[]` and the negative sign `-` to save a new object, named `Titanic_clean1`, without the rows with missing values. 
+
+```{r titanicclean1, exercise = TRUE}
+omit <- 
+Titanic_clean1 <- 
+```
+
+```{r titanicclean1-solution}
+omit <- which(is.na(Titanic$age) == TRUE)
+Titanic_clean1 <- Titanic[-omit,]
+```
+
+```{r titanicclean1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We can also use another function, called `complete.cases()`, to save the rows *without* any missing values directly. Use `complete.cases()` and the square brackets to save another version of `Titanic_clean2`. 
+
+```{r titanicclean2, exercise = TRUE}
+Titanic_clean2 <- 
+```
+
+```{r titanicclean2-solution}
+Titanic_clean2 <- Titanic[complete.cases(Titanic),]
+```
+
+```{r titanicclean2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+These methods are a bit messy. It's a lot cleaner to use the `filter()` function in `dplyr`--we reviewed this a while ago, but let's take a look again. 
+
+Remember that you can "pipe" together commands. We're going to pipe `Titanic` together with `filter()` and save the dataset as `Titanic_clean3`. 
+
+```{r titanicclean3, exercise = TRUE}
+Titanic_clean3 <- Titanic %>%
+  filter()
+```
+
+That didn't work as expected! We need to provide a logical condition that we can use to filter! Write a condition that eliminates the missing values. 
+
+```{r titanicclean4, exercise = TRUE}
+Titanic_clean3 <- Titanic %>%
+  filter()
+```
+
+```{r titanicclean4-solution}
+Titanic_clean3 <- Titanic %>%
+  filter(is.na(age) == FALSE)
+```
+
+```{r titanicclean4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="titanicclean4-hint">
+**Hint:** This condition is almost the same as what you used for `Titanic_clean1`, but this time you want to keep the missing values!  
+</div>
+
+This version of the code is a lot more readable--so I recommend that in the future you use `dplyr` syntax if you need. We will use `Titanic_clean3` for the remainder of the lab. 
+
+Apply `summary()` to `Titanic_clean3` to confirm that the missing values have been removed.
+
+```{r prepare-TitanicA, message = FALSE}
+Titanic_clean3 <- Titanic %>%
+  filter(is.na(age) == FALSE)
+```
+
+```{r titanicclean5, exercise = TRUE, exercise.setup = "prepare-TitanicA"}
+
+```
+
+```{r titanicclean5-solution}
+summary(Titanic_clean3)
+```
+
+```{r titanicclean5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Graphical Displays
+
+Use the `ggpairs()` function to investigate the relationships between the variables.
+
+```{r titanicplot2, exercise = TRUE, exercise.setup = "prepare-TitanicA"}
+
+```
+
+```{r titanicplot2-solution}
+ggpairs(Titanic_clean3, columns = c(2:5))
+```
+
+```{r titanicplot2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+  
+I don't particularly like this graph--the categorical variables are displayed with bar charts and some type of box representative of size. On top of this, I don't think the pairs of graphs are clearly labeled (for instance, look at the cell displaying `passengerClass` and `survived`--how do we know which row corresponds to which class?). It may be better to use a different graph to display relationships.
+
+It can be hard to display multiple graphs at once, but we can actually make it work in this case. First, create boxplots, sorted by `survived`, displaying the distribution of `age`. 
+
+Now, add a `facet_grid()`. We have been only been separating by one variable, but you can supply a formula with variables on both sides. Add a facet with `sex` in the rows and `passengerClass` in the columns. What observations can you make with these plots?
+  
+```{r titanicplot1, exercise = TRUE, exercise.setup = "prepare-TitanicA"}
+
+```
+
+```{r titanicplot1-solution}
+ggplot(data = Titanic_clean3, aes(x = survived, y = age, color = survived)) + 
+  facet_grid(sex ~ passengerClass) +
+  geom_boxplot() 
+```
+
+```{r titanicplot1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+  
+### Model Fitting
+
+Since we know that the "women and children first" policy was generally followed when the lifeboats were being loaded, fit a model predicting `survived` from `sex` and `gender`. Print out the summary of the model--which variables are significant?
+
+```{r titanicmodel2, exercise = TRUE, exercise.setup = "prepare-TitanicA"}
+titanic_model1 <- 
+```
+
+```{r titanicmodel2-solution}
+titanic_model1 <- glm(survived ~ sex + age, data = Titanic_clean3, family = "binomial")
+summary(titanic_model1)
+```
+
+```{r titanicmodel2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Many movies have perpetuated the myth that the lower class passengers were locked below decks and could not get onto the lifeboats. There is no evidence that this is true, but is there evidence that `passengerClass` significantly impacts the probability of survival? Fit a model predicting `sex`, `age`, and `passengerClass`, and view the summary. 
+
+```{r titanicmodel3, exercise = TRUE, exercise.setup = "prepare-TitanicA"}
+titanic_model2 <- 
+```
+
+```{r titanicmodel3-solution}
+titanic_model2 <- glm(survived ~ sex + age + passengerClass, data = Titanic_clean3, family = "binomial")
+summary(titanic_model2)
+```
+
+```{r titanicmodel3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We have learned about interactions between two variables--statisticians call these "two-way" interactions. You can also fit a "three-way" interaction between three variables. Fit a model, called `model3`, using a three-way interaction between `sex`, `age`, and `passengerClass`. How does this model compare to the others?
+
+```{r titanicmodel4, exercise = TRUE, exercise.setup = "prepare-TitanicA"}
+
+```
+
+```{r titanicmodel4-solution}
+titanic_model3 <- glm(survived ~ sex*age*passengerClass, data = Titanic_clean3, family = "binomial")
+summary(titanic_model3)
+```
+
+```{r titanicmodel4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Note that it is super, super uncommon to use interactions higher than two-way. You should be very, very careful about using them--if there are no good reasons to fit a three-way interaction, you should not use one!
+
+### Testing Coefficients Simultaneously
+
+We can see that some of the variables in `model3` are not significant, but the model's AIC is much lower than the other models. We can run a "drop in deviance" test to see if the two- and three-way interactions should be included in the model. Compare `model2`, with the individual `age`, `sex`, and `passengerClass` terms, and compare it to `model3`. Even though the variables are not significant, is there evidence that `model3` is better than `model2`?
+
+```{r prepare-TitanicB, message = FALSE}
+Titanic_clean3 <- Titanic %>%
+  filter(is.na(age) == FALSE)
+
+titanic_model1 <- glm(survived ~ sex + age, data = Titanic_clean3, family = "binomial")
+
+titanic_model2 <- glm(survived ~ sex + age + passengerClass, data = Titanic_clean3, family = "binomial")
+
+titanic_model3 <- glm(survived ~ sex*age*passengerClass, data = Titanic_clean3, family = "binomial")
+```
+
+```{r titanicLRT, exercise = TRUE, exercise.setup = "prepare-TitanicB"}
+
+```
+
+```{r titanicLRT-solution}
+anova(titanic_model2, titanic_model3, test = "LRT")
+```
+
+```{r titanicLRT-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+
+

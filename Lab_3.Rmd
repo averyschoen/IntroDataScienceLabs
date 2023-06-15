@@ -1,0 +1,1009 @@
+---
+title: "Lab 3"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(MASS)
+
+library(bakeoff)
+library(dplyr)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(mosaic)
+library(readr)
+
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+```
+
+## Goals
+
+Your goal is to get more practice wrangling data sets in R and coding permutation/randomization tests. The idea is to take the example code I provided in the lecture slides and adapt it for analyzing the results of a 2004 experiment on voter mobilization.
+
+## Part 1: Loading Packages
+
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using 4 packages that add extra functionality to R (`dplyr`, `ggplot2`, `mosaic`, and `readr`), as well as a package that loads extra data (`bakeoff`).  Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+
+```{r loadpackages, exercise = T}
+library(bakeoff)
+library(dplyr)
+library(ggplot2)
+library(mosaic)
+library(readr)
+```
+
+<div id="loadpackages-hint">
+**Hint:** If this chunk is not working when you input it into R, check to make sure the packages are installed! The bakeoff package can be installed by running the lines of code `install.packages("remotes")` and `remotes::install_github("apreshill/bakeoff")`.
+</div>
+
+## Part 2: Reading in Data
+
+Recall that a dataframe as R's way of representing a spreadsheet - it's the most common way of storing a data set in R.  The original spreadsheet can be stored in multiple places: as a file on your local machine, in an R package, or on the internet.
+
+We have already called the data directly from an R package--we will do this again, pulling the `bakers` dataset from `bakeoff`. This week, we will also review how to call the data from a spreadsheet stored on the internet (which you have already done on your homework assignments). The function `read.csv()` reads the data stored in the .csv file saved at the url of the dataset. By putting the url (in quotes!!) in the function, we can pull data directly off the internet.
+
+The following R code reads in the data set from voter mobilization experiment and stores it in a dataframe called `turnout`.  Run the code below now to read in the data set.  No need to modify this code, but remember how to use this function to read in data in the future!
+
+```{r turnout, exercise = T}
+data("bakers")
+turnout <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/pscl/RockTheVote.csv")
+```
+
+## Part 3: Data Storage and Wrangling
+
+When running a statistical analysis, it helps to be able to explore and wrangle your data. We will start learning about these tools in two parts. First, I will show you some methods for checking the storage mode of different objects in R. Then, I will show you how to use some basic functions from the `dplyr` package. As you know, this package is part of what is called the `tidyverse`--a "collection of R packages designed for data science". All of the packages in the `tidyverse` share an underlying philosophy. You are partially familiar with `dplyr`, as well as with another piece of the `tidyverse`--`ggplot2`! As I have mentioned, the `tidyverse` is very popular with data scientists.
+
+### Data Storage
+
+#### Vectors
+
+```{r prepare-vectors, message = FALSE}
+name <- "Amy"
+sib.names <- c("Jess", "Carly", "Joe", "Christian", "Daniel", "Aaron")
+family <- list(me = name, siblings = sib.names)
+
+library(Sleuth3)
+fatalities <- subset(ex0223, SpeedLimit == "Inc")
+results1 <- t.test(fatalities$PctChange, alternative = "two.sided", mu = 0, conf.level = 0.95)
+```
+
+The simplest structure is called a *vector*. For our purposes, a vector is a collection of elements. The elements can either be numbers or character strings, which are usually stored inside quotation marks (e.g., `"t"`, `"two.sided"`, `"paired"`, etc.). FYI--when I talk about vectors, I am generally talking about a specific type of vector called an *atomic* vector, where all of the elements are the same type. 
+
+Vectors are typically created using the `c()` function. For example, I can create a vector of the ages of all my siblings like so:
+
+```{r vector1, exercise = TRUE, exercise.setup = "prepare-vectors"}
+c(30, 27, 25, 21, 15, 15)
+```
+
+Notice that if I create a vector like this and hit the "Run" button, the code will work--but the vector "disappears" and can't be used again. In order to use it again, we need to save the vector. I typically use this with the right arrow, like in the first line of code below--many of you are already familiar with saving objects. Then, I can use the vector, now named `ages`, again--like in the second line of code, where I calculate what everyone's ages will be in 5 years. Change this line of code to match the ages of everyone in your lab group to make sure you can create a vector.  
+
+```{r vector2, exercise = TRUE, exercise.setup = "prepare-vectors"}
+ages <- c(30, 27, 25, 21, 15, 15)
+ages + 5
+```
+
+Now, let's create a vector of *character strings*, which are sequences of letters, numbers, or symbols. A character string in R is defined by quotation marks--see the line below as an example. 
+
+```{r cs1, exercise = TRUE, exercise.setup = "prepare-vectors"}
+name <- "Amy"
+name
+```
+
+You can check to see if something is a character string using `is.character()`. The function should return a `TRUE` or `FALSE` (these are called Booleans, and we will talk about them in a later lab).
+
+```{r cs2, exercise = TRUE, exercise.setup = "prepare-vectors", message = FALSE}
+is.character(name)
+```
+
+As I mentioned, you can also create a vector of character strings. Below, I have created a vector of character strings representing my siblings' names--try changing the vector to represent the names of everyone in your lab group. You can also change the name of this vector to `lab.names`. 
+
+```{r vector3, exercise = TRUE, exercise.setup = "prepare-vectors"}
+sib.names <- c("Jess", "Carly", "Joe", "Christian", "Daniel", "Aaron")
+sib.names
+```
+
+#### Lists
+
+A *list* is a slightly more complicated data structure. In a list, you can save different types of objects--single elements (like `name`, which is one character string), vectors (like `sib.names`, which is a vector of character strings), and so on. You can create a list using the `list()` command, like so:
+
+```{r list1, exercise = TRUE, exercise.setup = "prepare-vectors"}
+family <- list(name, sib.names)
+family
+```
+
+What is especially interesting is that you can supply the elements of a list with names, like this:
+
+```{r list2, exercise = TRUE, exercise.setup = "prepare-vectors"}
+family <- list(me = name, siblings = sib.names)
+family
+```
+
+Notice then, that you can *extract* an element of a list by referring to its name, like this:
+
+```{r list3, exercise = TRUE, exercise.setup = "prepare-vectors"}
+family$me
+```
+
+The dollar sign, `$`, is called an extraction operator, and enables us to extract an element of a list by name. We won't work with creating lists much, so I won't ask you to practice making them, but we do extract elements quite often--in fact, you may have already worked with a list without realizing it! Check out the following code:
+
+```{r list4, exercise = TRUE, exercise.setup = "prepare-vectors"}
+results1 <- t.test(fatalities$PctChange, alternative = "two.sided", mu = 0, conf.level = 0.95)
+results1$conf.int
+```
+
+The first line of code saves the results of the $t$-test you ran for Homework 1 as a list named `results1`. The second line of code extracts a specific element, `conf.int`, which is the corresponding confidence interval! This allows us to see one specific piece of our analysis instead of all of the output at once. 
+
+```{r list5, exercise = TRUE, exercise.setup = "prepare-vectors"}
+results1 <- t.test(fatalities$PctChange, alternative = "two.sided", mu = 0, conf.level = 0.95)
+results1$conf.int
+```
+
+To see what elements are contained in any list, you can use the `attributes()` function, which is demonstrated below with the `results1` list. Run this code, then see if you and your group can extract the p-value from `results1`. 
+
+```{r list6, exercise = TRUE, exercise.setup = "prepare-vectors"}
+attributes(results1)
+```
+
+```{r list6-solution}
+attributes(results1)
+results1$p.value
+```
+
+```{r list6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+#### Data Frames
+
+FINALLY, we can talk about data frames! A data frame is a specific type of list, where every element is a vector. One example of a data frame is `bakers`--let's use the `glimpse()` function to get a preliminary look at the data. 
+
+```{r df1, exercise = TRUE}
+glimpse(bakers)
+```
+This data frame contains data on every baker ever to have competed on "The Great British Bake Off". Known as "The Great British Baking Show" in the U.S., "The Great British Bake Off" is a television baking competition for amateur bakers in Britain (currently on Netflix). 
+
+The `bakers` data frame is comprised of eight vectors: 
+
+* `series`, what we might call "season" in the U.S., 
+* `baker_full`, the baker's full name, 
+* `baker`, the baker's first name, 
+* `age`, the baker's age,
+* `occupation`, the baker's job
+* `hometown`, where the baker is from, 
+* `baker_last`, the baker's last name, and
+* `baker_first`, the baker's first name again (for some reason). 
+
+All of these eight vectors combined create the data frame. Because the data frame is a special type of list, we can extract vectors/columns of the data frame--in the chunk below, see if you can extract the vector containing the bakers' jobs. 
+
+```{r df2, exercise = TRUE}
+
+```
+
+```{r df2-solution}
+bakers$occupation
+```
+
+```{r df2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+#### More Data Structures
+
+You will frequently encounter vectors, lists, and data frames, but there are a lot of other storage types that we will leave alone for now. If you ever need to know what type you are working with, you can use the `mode()` function. Use this function to confirm that `bakers` is a data frame. 
+
+```{r mode, exercise = TRUE}
+mode()
+```
+
+```{r mode-solution}
+mode(bakers)
+```
+
+```{r mode-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+It turns out that a data frame is just a special type of list! But that's okay--to confirm that it is specifically a data frame, use `is.data.frame()`.
+
+### Data Exploration
+
+Now that you know how data is stored, we can also learn some useful functions for data exploration. One such function is `glimpse()`, which you've already seen, and `attributes()`, which is useful for a list but sometimes returns complicated output. Another such function is `colnames()`, which returns the **col**umn **names** of a data frame (there is also a similar function called `rownames()`, but I don't use it nearly as often). Apply this function to `bakers` in the code chunk below. 
+
+```{r colnames, exercise = TRUE}
+colnames()
+```
+
+```{r colnames-solution}
+colnames(bakers)
+```
+
+```{r colnames-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We already know how to use `glimpse()` to look at the values inside the dataset, but the output specifically states which of the columns are numeric, which are character strings, and which are factors. Apply this function to `bakers` in the code chunk below. 
+
+```{r summary, exercise = TRUE}
+glimpse()
+```
+
+```{r summary-solution}
+glimpse(bakers)
+```
+
+```{r summary-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Notice how `series` has `<fct>` next to its column name. This is because it is saved as a factor--we learned a bit about them last week.  `baker_full`, `baker`, `occupation`, `hometown`, `baker_last`, and `baker_first` are all labeled as `<chr>`, meaning it is a character string, and `age` is saved as `<dbl>`. `<dbl>` stands for "double", and signifies that the variable is saved in a numeric format allowing for decimal values.
+
+Now, on to `dplyr`. There are five basic functions in `dplyr` we will focus on for today:
+
+* `mutate()`, which allows you to create new variables based on existing variables, and 
+* `select()`, which allows you to pick variables by their names,
+* `filter()`, which allows you to pict variables based on their values,
+* `summarize()`, which allows you to distill many values into a single value, and 
+* `arrange()`, which changes the order of the rows.
+
+All of these functions work in the same way:
+
+1. The first argument is the data frame you are trying to manipulate.
+2. The subsequent arguments describe what to do with the data frame (`mutate()`, `select()`, `filter()`, `summarize()`, and `arrange()`), using the variable names (without quotes).
+3. The result is a new data frame!
+
+Because all the functions work similarly, it is easy to chain them together in simple steps for a complicated result. Often, these steps are chained together using the pipe operator, `%>%`. The pipe operator works kind of like the plus sign (`+`) in `ggplot2`--you start with a base level and then continually add the different steps. You'll see examples in the next section (other than `arrange()`, which I do not use very frequently).
+
+#### `mutate()`
+
+The `mutate()` function is how you create new variables based on existing variables. Take a look at the following chunk of code:
+
+```{r mutate, exercise = T}
+bakers %>% 
+  mutate(logage = log(age))
+```
+
+A couple of things:
+
+* You can see the data frame we are trying to manipulate, `bakers` comes first in the code. Think of this as your starting point. 
+* Then, we use the pipe operator, `%>%`, to link `bakers` with the `mutate()` function. 
+* In `mutate()`, we supply a new name, `logage`. The name MUST be new, otherwise you will end up write over the existing variable! You can see here we've also supplied the transform, `log(age)`. The transform uses the the direct name of the existing column.
+* The output of this line of code is the new version of `bakers` with the additional `logage` column (you may have to toggle to the right to see it in the last column).
+
+What's extra cool about adding columns this way is that you can add multiple columns at once! For some reason, let's say we want to add a log-transformed column and a square root column. See the example below:
+
+```{r mutate2, exercise = T}
+bakers %>% 
+  mutate(logage = log(age), sqrtage = sqrt(age))
+```
+
+Instead of writing a line for every new variable, you can combine the transforms into a single step (one of the advantages to `dplyr`!). This makes for much cleaner, nicer code than ways you may have already learned. 
+
+A warning--if you don't save the mutated versions of your data frame, the added columns won't exist for you to use later! It should look something like:
+
+```{r mutate3, exercise = T}
+bakers <- bakers %>% 
+  mutate(logage = log(age), sqrtage = sqrt(age))
+```
+
+You can also give dataframes new names, like we did in Homework 2.
+
+Create a few lines of code that add a column containing the reciprocal of the baker ages. 
+
+```{r mutate4, exercise = TRUE}
+bakers <- 
+```
+
+```{r mutate4-solution}
+bakers <- bakers %>% 
+  mutate(reciprocal = 1/age)
+```
+
+```{r mutate4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+#### `select()`
+
+As mentioned, `select()` allows you to pick variables by their names. It works very similarly to `mutate()`, however, notice that you can use `mutate()` to change or add columns to a dataframe and `select()` returns a dataframe with fewer columns. 
+
+let's say that we are interested in using only the `baker_full`, `age`, and `occupation` from the `bakers` data frame.
+
+```{r select1, exercise = T}
+bakers %>% 
+  select(baker_full, age, occupation)
+```
+
+If you scroll to the right, you can confirm that the output is a smaller dataframe than the original! Notice again: 
+
+* `bakers`, your data frame,  comes first in the code. 
+* Then, we use the pipe operator to link `bakers` with the `select()` function. 
+* In `select()`, we can call out the variables by name. 
+* The output of this line of code is a simplified version of `bakers` with only the `baker_full`, `age`, and `occupation` variables. 
+
+This function isn't super useful when you are trying to extract one variable at a time. In fact, the extraction operator is much simpler to use! However, if you have a large dataset (which we will be working with later in the semester) and would like to pare it down, `select()` makes a lot of sense. 
+
+Create a few lines of code printing a dataframe  contains only `baker_first` and `hometown`.
+
+```{r select2, exercise = TRUE}
+
+```
+
+```{r select2-solution}
+bakers %>% 
+  select(baker_first, hometown)
+```
+
+```{r select2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+#### `filter()`
+
+Recall that the `filter()` function selects observations based on their values. It's more similar to `select()` than `mutate()`--instead of adding or changing to the dataframe like `mutate()`, it returns a new, smaller dataset that is a subset of the original based on some condition applied to the variables. 
+
+How do we write the conditions? By using a special type of operator in R called a **logical operator**. A logical operator is a symbol that links two statements and results in a true or false statement. You may be familiar with these operators from your previous math classes--consider greater than (`>`) or less than (`>`). 
+
+Write a line of code to confirm that seven is greater than five. 
+
+```{r filter3, exercise = TRUE}
+
+```
+
+```{r filter3-solution, message = FALSE, warning = FALSE, echo = FALSE, eval = FALSE}
+7 > 5
+```
+
+```{r filter3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r filter4, echo=FALSE}
+question("What is the output?",
+  answer("TRUE", correct = TRUE),
+  answer("FALSE"),
+  answer("0"),
+  answer("1"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Notice that the logical operator results in `TRUE`--now write a line of code to confirm that eight is NOT greater than eleven. 
+
+```{r filter5, exercise = TRUE}
+
+```
+
+```{r filter5-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+8 > 11
+```
+
+```{r filter5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r filter6, echo=FALSE}
+question("What is the output?",
+  answer("TRUE"),
+  answer("FALSE", correct = TRUE),
+  answer("0"),
+  answer("1"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Here, you can see the statement is `FALSE`. Other logical operators include equal to `==` (notice that R requires two equals signs, not just 1)! Write a line of code to confirm that the square root of sixteen is 4. Be careful to use TWO equal signs. 
+
+```{r filter7, exercise = TRUE}
+
+```
+
+```{r filter7-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+sqrt(16) == 4
+```
+
+```{r filter7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Finally, we may be interested in values that are not equal to other values. To test if values are not equal, use `!=`. Write a line of code to confirm that the square root of 81 is not equal to 6. 
+
+```{r filter8, exercise = TRUE}
+
+```
+
+```{r filter8-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+sqrt(81) != 6
+```
+
+```{r filter8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+ 
+You can find out more about other logical operators [here](https://www.statmethods.net/management/operators.html). Note that you may also have to view your data to write the exact conditional statement--familiarity with the values is required. 
+
+Now let's combine the use of logical operators with `filter()`. 
+
+```{r filter1, exercise = T}
+bakers %>% 
+  filter(series == 5)
+```
+
+These two lines of code create a new dataframe returning the competitors from Series (Season) 5--one of my favorites! But note that we didn't save it to use later. That code would look something like
+
+```{r prepare-filter, message = FALSE}
+series_5 <- bakers %>% 
+  filter(series == 5)
+
+retired <- c("Retired", "Retired air steward", "Retired Naval Officer", "Retired Practice Manager", "Semi-retired, Substitute teacher")
+```
+
+```{r filter2, exercise = T, exercise.setup = "prepare-filter"}
+series_5 <- bakers %>% 
+  filter(series == 5)
+```
+
+Write a line of code that filters `bakers` into those with ages greater than 35. 
+
+```{r filter9, exercise = TRUE}
+bakers %>%
+  filter(age)
+```
+
+```{r filter9-solution}
+bakers %>% 
+  filter(age > 35)
+```
+
+```{r filter9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Write a line of code that filters `bakers` into everyone who is *not* `"Retired"`. 
+
+```{r filter10, exercise = TRUE}
+bakers %>%
+  filter()
+```
+
+```{r filter10-solution}
+bakers %>% 
+  filter(occupation != "Retired")
+```
+
+```{r filter10-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Notice that you can also get creative with the operator `%in%`, once you know some basic properties of vectors in R. If you look at all of the values of `occupation`, you can see that there are multiple retired competitors, but many of them wrote something other than `"Retired"`. Let's say we are interested in viewing this whole group. 
+
+First, we would create a vector containing all of the character strings describing someone who is retired in any way. Remember, character strings must be an exact match, including capitalized letters!
+
+```{r filter11, exercise = TRUE}
+retired <- c("Retired", "Retired air steward", "Retired Naval Officer", "Retired Practice Manager", "Semi-retired, Substitute teacher")
+```
+
+Then, you can use the `%in%` operator to filter on all observations *in* this group. 
+
+```{r filter12, exercise = T, exercise.setup = "prepare-filter"}
+bakers %>% 
+  filter(occupation %in% retired)
+```
+
+You can also chain conditions together using AND or OR, just like you would in a math class. The symbol for AND is `&`, and OR is `|`. 
+
+Write a line of code that filters anyone who is named Kate OR who competed in series 7. 
+
+```{r filter13, exercise = TRUE, exercise.setup = "prepare-filter"}
+bakers %>%
+```
+
+```{r filter13-solution}
+bakers %>% 
+  filter(baker == "Kate" | series == 7)
+```
+
+```{r filter13-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Write a line of code that filters anyone who is named Kate AND who competed in series 7. 
+
+```{r filter14, exercise = TRUE, exercise.setup = "prepare-filter"}
+
+```
+
+```{r filter14-solution}
+bakers %>% 
+  filter(baker == "Kate" & series == 7)
+```
+
+```{r filter14-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+#### `summarize()`
+
+ This function allows you to distill many values into a single value (often, a summary statistic like the mean or standard deviation). The syntax of `summarize()` looks very similar to `mutate()`, `select()`, and `filter()`, but `summarize()` is different because it creates new output completely separate from the original dataframe. Here's an example below. 
+
+```{r summarize1, exercise = T}
+bakers %>% 
+  summarize(Mean = mean(age))
+```
+
+One last time:
+
+* `bakers`, your data frame,  comes first in the code.  
+* Then, we use the pipe operator to link `bakers` with the `summarize()` function. 
+* In `summarize()`, we supply a new name, Mean, AND we apply a function that will give us the desired summary statistic (in this case, `mean()`. Again, the function uses the the direct name of the existing column.
+
+This time, the output of this line of code is NOT the new version of `bakers`! Instead, it is a small table with the summary statistic. What's nice about `summarize()` is that just like with `mutate()`, we can perform multiple calculations at a time. 
+
+```{r summarize2, exercise = T}
+bakers %>% 
+  summarize(Mean = mean(age), SD = sd(age))
+```
+
+Notice that by supplying an additional summary statistic, the table gains an additional column. Again, this function is similar to `summary()`, but it's extra nice because we can ask for whatever we want (we're not just restricted to the mean and five number summary, which is what comes out of `summary()`).
+
+Create a few lines of code that return the median, minimum, and maximum baker ages.
+
+```{r summarize3, exercise = TRUE}
+bakers %>%
+  summarize()
+```
+
+```{r summarize3-solution, message = FALSE, warning = FALSE, echo = FALSE, eval = FALSE}
+bakers %>%
+  summarize(min(age), median(age), max(age))
+```
+
+```{r summarize3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, create a few lines of code that return the mean and standard deviation of the log transformed ages without using `mutate()`. 
+
+```{r summarize4, exercise = TRUE}
+bakers %>%
+  
+```
+
+```{r summarize4-solution, message = FALSE, warning = FALSE, echo = FALSE, eval = FALSE}
+bakers %>%
+  summarize(mean(log(age)), sd(log(age)))
+```
+
+```{r summarize4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+#### `group_by()`
+
+With any of the previous functions, we can use the `group_by()` function. As you may have guessed, `group_by()` groups the observations together. If you want the data grouped by a particular variable (likely saved as a factor or character string), supply the variable as an argument inside `group_by()`. 
+
+```{r groupby1, exercise = T}
+bakers %>% 
+  group_by(occupation) %>%
+  summarize(Mean = mean(age), n = n())
+```
+
+This code looks similar--we're still putting `bakers` first, using the pipe operator, etc. However, there are some slight differences--mainly, we've added an extra line for `group_by()` and joined it with an additional pipe operator. This is an example of multiple, simple steps that result in a complex table. A few notes:
+
+* The `n()` function gives the count of observations in each group (because the bakers are so diverse, we have lots of lines with ones and twos). It's handy when calculating summary statistics for 2-sample $t$-tests, especially. 
+* Each additional group results in an additional row--you can see this table is much bigger than the one in the previous section. 
+
+By using these verbs, you can get pretty far in the world of data manipulation! There are lots of other tasks we can carry out--for more information, check out [this resource on `dplyr`](https://dplyr.tidyverse.org/) or [the data transformation chapter of the book R for Data Science](https://r4ds.had.co.nz/transform.html). There is also a `dplyr` cheat sheet in the R Resources folder on our course Moodle.
+
+## Part 4: Transformations in `ggplot2` 
+
+You have already seen that it is easy to add a transformed variable to a data frame using `dplyr` and `mutate()`. Conveniently, you can also use transformations directly in `ggplot`. 
+
+Run the following code chunk:
+
+```{r ggplot1, exercise = T}
+ggplot(bakers, aes(x = age)) + 
+  geom_histogram(bins = 11)
+```
+
+As you may have guessed, this chunk creates a histogram of the baker ages. Now, change the argument inside `aes()` to read `x = log(age)`. 
+
+```{r ggplot2, exercise = T}
+ggplot(bakers, aes(x = log(age))) + 
+  geom_histogram(bins = 11)
+```
+
+As you can see, the histogram changes! Does it look more normal?
+
+Now, adapt the code so that the histogram displays the distribution of the square root of the ages. 
+
+```{r ggplot3, exercise = TRUE}
+ggplot(bakers, aes(x = log(age))) + 
+  geom_histogram(bins = 11)
+```
+
+```{r ggplot3-solution}
+ggplot(bakers, aes(x = sqrt(age))) + 
+  geom_histogram(bins = 11)
+```
+
+```{r ggplot3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+It turns out that instead of applying the `sqrt()` function, you can add an additional line of code to transform the $x$-axis.
+
+```{r ggplot4, exercise = TRUE}
+ggplot(bakers, aes(x = age)) + 
+  geom_histogram(bins = 11) +
+  scale_x_sqrt()
+```
+
+There are a select few commands in R for changing the scale of the $x$-axis. Using the `ggplot2` cheatsheet in the R Resources folder on Moodle, see if you can use one of these commands to display ages on a log base 10 scale. 
+
+```{r ggplot5, exercise = TRUE}
+ggplot(bakers, aes(x = age)) + 
+  geom_histogram(bins = 11) +
+  scale_x_sqrt()
+```
+
+```{r ggplot5-solution}
+ggplot(bakers, aes(x = age)) + 
+  geom_histogram(bins = 11) +
+  scale_x_log10()
+```
+
+```{r ggplot5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Either of these methods is fine to use when creating a plot! However, there are so few functions to add that I prefer the first method, since it is more flexible.
+
+## Part 5: Permutation Tests 
+
+```{r prepare-permutation1, message = FALSE}
+turnout <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/pscl/RockTheVote.csv")
+
+turnout_sumstats <- turnout %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r), sd = sd(r), n = n())
+
+test_statistic <- turnout_sumstats$Mean[2] - turnout_sumstats$Mean[1]
+
+zeros <- rep(0, 10)
+empty <- NULL
+
+diff <- NULL
+```
+
+Let's put these new tools in action! We're going to use a new dataset, `turnout`--in 2008, researchers implemented an experiment to assess the effects of a voter mobilization campaign. They randomly assigned 85 cable systems to either to run ads produced by \textit{Rock the Vote} encouraging voter mobilization for 18-19 year olds four times per night during the last week of the presidential election cycle in 2004, or to run no such ads (to avoid swaying the election results, these ads were only run in districts that are not considered "battleground", a.k.a., districts where voter turnout from 18-19 year olds would not have changed the results of the election). For any other questions you may have, please check out the [dataset documentation](https://vincentarelbundock.github.io/Rdatasets/doc/pscl/RockTheVote.html).
+
+### Data Exploration
+
+Ultimately, we would like to implement a randomization test to investigate whether or not these ads increased mean levels of voter turnout for 18-19 year olds in the 2004 presidential election. First, let's examine the data. Using the `dim()` function (another useful function for exploring data frames), confirm that the sample size of this dataset is 85 cable systems. There should be seven different variables in the dataset--use `colnames()` to determine what is included. 
+
+```{r dimensions, exercise = TRUE, exercise.setup = "prepare-permutation1"}
+dim()
+colnames()
+```
+
+```{r dimensions-solution}
+dim(turnout)
+colnames(turnout)
+```
+
+```{r dimensions-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Summary Statistics
+
+We want to focus on the column `treated`, which describes whether or not the local cable system aired the ads, and the column `r`, which describes the number of voters from each cable system who actually cast a vote. Write a few lines of code using `group_by()` and `summarize()` from `dplyr` to find the average, standard deviation, and sample size from each treatment group.
+
+```{r summaries, exercise = TRUE, exercise.setup = "prepare-permutation1"}
+turnout %>%
+  group_by()
+```
+
+```{r summaries-solution, message = FALSE, warning = FALSE, echo = FALSE}
+turnout %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r), sd = sd(r), n = n())
+```
+
+```{r summaries-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="summaries-hint">
+**Hint:** `treated` is coded as a dummy variable--if the cable system was treated with ads, a 1 is recorded, and if not treated, a 0 was recorded. It is technically numeric but we can treat it as categorical.
+</div>
+
+### Calculating Test Statistic
+
+For this permutation test, we will report the test statistic as the difference in the average number of voters from treated and untreated cable systems. What is the value of the test statistic from this experiment? Use the values from the previous code chunk.
+
+```{r teststat, exercise = TRUE, exercise.setup = "prepare-permutation1"}
+test_statistic <- 
+test_statistic
+```
+
+```{r teststat-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+test_statistic <- 146.7619 - 155.2558
+test_statistic
+```
+
+```{r teststat-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="teststat-hint">
+**Hint:** Don't forget to print out your test statistic so you know what value it takes!
+</div>
+
+Notice that if you save the summary statistics, you can extract the values from the new saved object, like so:
+
+```{r teststat2, exercise = TRUE, exercise.setup = "prepare-permutation1"}
+turnout_sumstats <- turnout %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r), sd = sd(r), n = n())
+turnout_sumstats$Mean
+```
+
+There are more extraction operators we haven't learned about--the brackets `[]`. Brackets refer to locations within a vector (or a dataframe, but that's more complicated). `turnout_sumstats$Mean[1]` will give the first value in `turnout_sumstats$Mean`, and `turnout_sumstats$Mean[2]` will give the second value. Sometimes, statisticians code based on these values so there are no errors in data entry--see the line of code below. 
+
+```{r teststat3, exercise = TRUE, exercise.setup = "prepare-permutation1"}
+test_statistic <- turnout_sumstats$Mean[2] - turnout_sumstats$Mean[1]
+test_statistic
+```
+
+### Individual Iteration
+
+Now that we have a test statistic, we can randomize the groups for a single iteration of the randomization test using `mutate()` and a new function called `shuffle()` (like a shuffling a deck of cards, this function puts your data values into a random order, which is exactly what we want for a permutation/randomization test). `shuffle()` comes from the `mosaic` package, which we loaded at the beginning of this lab--make sure you install and load it on your laptops! Call the new, scrambled version of the data `shuffled_data`. Print out the original vector and the scrambled vector to make sure they look different!
+
+```{r iteration1, exercise = TRUE, exercise.setup = "prepare-permutation1"}
+shuffled_data <- turnout %>%
+  mutate(r = shuffle(r))
+```
+
+```{r prepare-permutation2, message = FALSE}
+turnout <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/pscl/RockTheVote.csv")
+set.seed(1132020)
+
+turnout_sumstats <- turnout %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r), sd = sd(r), n = n())
+
+test_statistic <- turnout_sumstats$Mean[2] - turnout_sumstats$Mean[1]
+
+zeros <- rep(0, 10)
+empty <- NULL
+
+diff <- NULL
+
+set.seed(1132020)
+
+shuffled_data_means <- turnout %>%
+  mutate(r = shuffle(r)) %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r))
+```
+
+Given the scrambled data, we can compute the test statistic for this single iteration. Remember that one of the benefits of `dplyr` is that we can link a whole bunch of lines together. Borrowing your lines of code from the last chunk, can you add two layers that will group the observations by `treated` and summarize each group by taking the average voter turnout?
+
+```{r iteration2, exercise = TRUE, exercise.setup = "prepare-permutation2"}
+shuffled_data_means <- turnout %>%
+  mutate(r = shuffle(r)) %>%
+```
+
+```{r iteration2-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+shuffled_data_means <- turnout %>%
+  mutate(r = shuffle(r)) %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r))
+```
+
+```{r iteration2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Using `shuffled_data_means`, calculate your test statistic from this iteration. Is it more extreme (greater than) your original test statistic?
+
+```{r iteration3, exercise = TRUE, exercise.setup = "prepare-permutation2"}
+
+```
+
+```{r iteration3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+shuffled_data_means$Mean[2] - shuffled_data_means$Mean[1]
+```
+
+```{r iteration3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Writing Loops
+
+Eventually, we will need to repeat this calculation many times. One way to repeat calculations is to program a loop. There are multiple types of loops, but we will focus on for loops, which repeat for a set number of times (say, 5).
+
+A generic for loop looks like this:
+
+```{r loops1, exercise = TRUE}
+for (index in beginning:end){
+calculation
+}
+```
+
+* First, you start with the `for` statement, which lets R know that you are about to start a `for` loop.
+* Add a set of parentheses (`()`) after `for`. Everything inside the parentheses spells out the conditions under which R repeats calculations.
+  + You need to define an index–this will help with storing data/results later. I frequently use `i` as the index. 
+  + You also need to specify a beginning and end point.
+  + The colon (`:`) stands for "to" in R–in this case, you are going from the beginning to the end.
+* Add a set of curly braces (`{}`) after the parentheses.Everything inside the braces spells out exactly what calculations you would like to repeat. You can put whatever you want here! Double check to make sure your curly brace properly ended, otherwise your loop has not been closed.
+
+<span style="color:red"> Hint: Do you see a red circle with an "X" inside on the left hand side of your text editor? That tells you you’ve made a syntax error, like forgetting to close your curly brace.  </span>
+
+Take a look at the following loop. Can you specify the index, beginning and end points, and what calculations you think the loop will perform? Now run it–are your first guesses correct?
+
+```{r loops2, exercise = TRUE}
+for(i in 1:10){
+  2*i
+}
+```
+
+Did anything happen? Probably not. R did these calculations, but since you didn’t store anything, it performed the calculations once and they were "lost" forever–there’s no way to find them again!
+
+To store something, we need to use variable assignment via the right arrow (`<-`). Let’s make a vector full of 10 zeros.
+
+```{r loops3, exercise = TRUE}
+zeros <- rep(0, 10)
+zeros
+```
+
+<div id="loops3-hint">
+**Hint:**  We could code a vector full of zeros using `c()`, but let's use `rep()` instead--in this case, `rep()` will repeat the number 0 ten times.
+</div>
+
+We are going to store our calculations inside the `zeros` vector. Let’s incorporate it into our loop:
+
+```{r loops4, exercise = TRUE, exercise.setup = "prepare-permutation2"}
+for(i in 1:10){
+  zeros[i] <- 2*i
+}
+```
+
+Run this in your console. It still doesn’t look like anything happened, but print the `zeros` vector.  It should not be full of zeros anymore! Instead, the calculations from our loop have been stored inside.
+
+We can also create an empty vector using `NULL`.
+
+```{r loops5, exercise = TRUE}
+empty <- NULL
+empty
+length(empty)
+```
+
+This creates a vector of length 0–it has nothing in it. However, we can still use it to store results! R will add each calculation to empty as the loop iterates.
+
+```{r loops6, exercise = TRUE, exercise.setup = "prepare-permutation2"}
+for(i in 1:20){
+empty[i] <- i+5
+}
+empty
+```
+
+Try writing your own for loop to develop a list of the first 8 perfect squares. Don't forget to create an empty vector, named squares!
+
+```{r loops7, exercise = TRUE}
+squares <- 
+```
+
+```{r loops7-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+squares <- NULL
+
+for (i in 1:8){
+  squares[i] <- i^2
+}
+
+squares
+```
+
+```{r loops7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Filling In Loops
+
+Now we can write more than one iteration of a randomization test! Using the structure of a loop below, write a code chunk that will repeat your code from the previous section 1000 times. The results should be stored in the `diff` vector. 
+
+```{r prepare-permutation3, message = FALSE}
+turnout <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/pscl/RockTheVote.csv")
+
+turnout_sumstats <- turnout %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r), sd = sd(r), n = n())
+
+test_statistic <- turnout_sumstats$Mean[2] - turnout_sumstats$Mean[1]
+
+diff <- NULL
+
+set.seed(126)
+for (i in 1:1000){
+  shuffled_data_means <- turnout %>%
+    mutate(r = shuffle(r)) %>%
+    group_by(treated) %>%
+    summarize(Mean = mean(r))
+  
+  diff[i] <- shuffled_data_means$Mean[2] - shuffled_data_means$Mean[1]
+}
+```
+
+```{r loop, exercise = TRUE, exercise.setup = "prepare-permutation3"}
+setseed(126) ## Allows for replicable results
+
+diff <- NULL
+
+for (i in 1:1000){
+
+}
+
+```
+
+```{r loop-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+set.seed(126) ## Allows for replicable results
+
+diff <- NULL
+
+for (i in 1:1000){
+  shuffled_data_means <- turnout %>%
+  mutate(r = shuffle(r)) %>%
+  group_by(treated) %>%
+  summarize(Mean = mean(r))
+   
+  diff[i] <- shuffled_data_means$Mean[2] - shuffled_data_means$Mean[1]
+}
+```
+
+```{r loop-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### Plotting Sampling Distribution
+
+Almost there! Let's make a plot of these results.  This is an approximation of the sampling distribution of our sample statistic. What does the red line represent?
+
+```{r plot, exercise = T, message = F, warning = FALSE, exercise.setup = "prepare-permutation3"}
+simulation_results <- as.data.frame(diff)
+
+ggplot(data = simulation_results, aes(x = diff)) +
+  geom_histogram() +
+  geom_vline(xintercept = test_statistic, colour = "red")
+```
+
+We can see that the new `simulation_results` data frame has 1000 rows (one for each of the 1000 simulated shuffles) and 1 variable (`dif` - the difference in means for that simulated shuffle).
+
+### Calculating p-values
+
+Remember that the p-value is the proportion of iterations where the test statistic is more extreme than the observed test-statistic. What is the p-value from this test? Should you reject or fail to reject the null hypothesis that treated cable systems have higher turnout (in terms of the average number of voters)?
+
+```{r pval, exercise = TRUE, exercise.setup = "prepare-permutation3"}
+sum(abs() > abs())/1000
+```
+
+```{r pval-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+sum(abs(diff) > abs(test_statistic))/1000
+
+```
+
+```{r pval-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="pval-hint">
+**Hint:** Use absolute values for the two-sided p-value to come out correctly!
+</div>
+
+<span style="color:red">If you are eligible to vote (US citizen and 18 years of age or older on Election Day) and wish to register to vote, check out <https://www.mtholyoke.edu/registrar/voter_registration>, or email and ask me for help! Please note that this is not required for this class and will not in anyway affect your grade. However, voting is part of being a good citizen, and I want to do my part to make sure  that everyone who wants to vote can vote. </span>
+
