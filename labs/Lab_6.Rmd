@@ -1,0 +1,548 @@
+---
+title: "Lab 6"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(MASS)
+library(multcomp)
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+```
+
+## Goals
+
+Your goal is to carry out an ANOVA analysis with a contrast from start to finish, including checking assumptions, the $F$-test for ANOVA, and setting up weights for contrasts. 
+
+## Part 1: Loading Packages
+
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `readr`, `dplyr`, and `ggplot2`, but we will also load `multcomp`, which allows us to fit contrasts. Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+
+```{r loadpackages, exercise = T}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(multcomp)
+```
+
+## Part 2: Reading in Data
+
+The following R code loads a dataset called `TravelMode` from the R package `AER`. `TravelMode` describes travel preferences from 840 respondents in Australia--read more at the [dataset documentation](https://vincentarelbundock.github.io/Rdatasets/doc/AER/TravelMode.html).
+
+```{r travelprep, exercise = T}
+library(AER)
+data(TravelMode)
+```
+
+## Part 3: Travel Preferences
+
+```{r prepare-travel1, message = FALSE}
+library(AER)
+data(TravelMode)
+```
+
+### Hypotheses
+
+A survey on travel preferences was collected for 840 participants in Australia. First, let's look at the dataset.
+
+```{r travel1, exercise = TRUE, exercise.setup = "prepare-travel1"}
+glimpse()
+```
+
+```{r travel1-solution}
+glimpse(TravelMode)
+```
+
+```{r travel1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+We are interested in seeing if the total time to travel can be predicted from travel mode (air, plane, bus, or car). However, there is concern with our dataset. We need to change it. Second, there is no variable for total travel time--we have `wait`, the terminal waiting time (0 for car), and `travel`, the travel time in vehicle. We will need to change it--use `dplyr` syntax to add a new column, `total`, to `TravelMode`.
+
+```{r travel2, exercise = TRUE, exercise.setup = "prepare-travel1"}
+TravelMode <- TravelMode %>%
+  mutate(total = )
+```
+
+```{r travel2-solution}
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+```
+
+```{r travel2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+What are the appropriate hypotheses to see if the mean total travel time depends on travel mode?
+
+Now, calculate the summary statistics for each group using `dplyr` syntax.
+
+```{r prepare-travel2, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+```
+
+```{r travel3, exercise = TRUE, exercise.setup = "prepare-travel2"}
+TravelMode %>%
+  group_by() %>%
+  summarize(Mean = mean(), SD = sd(), n = n())
+```
+
+```{r travel3-solution}
+TravelMode %>%
+  group_by(mode) %>%
+  summarize(Mean = mean(total), SD = sd(total), n = n())
+```
+
+```{r travel3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Create boxplots of the travel time for each travel mode using `ggplot2`.
+
+```{r travel4, exercise = TRUE, exercise.setup = "prepare-travel2"}
+ggplot(data = , aes(x = , y = , fill = )) +
+  geom_boxplot()
+```
+
+```{r travel4-solution}
+ggplot(data = TravelMode, aes(x = mode, y = total, fill = mode)) +
+  geom_boxplot()
+```
+
+```{r travel4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Both the summary statistics and the boxplots indicate to me that there is an issue with our assumptions. Specifically, the standard deviation for `air` is much less the standard deviation for all of the other groups. Let's see what happens if we proceed with model fitting without trying to make adjustments for the assumption of equal standard deviations. 
+
+First, fit a model predicting total travel time from the travel mode. Save it as `mfull_travel`.
+
+```{r travel5, exercise = TRUE, exercise.setup = "prepare-travel2"}
+mfull_travel <- lm()
+```
+
+```{r travel5-solution}
+mfull_travel <- lm(data = TravelMode, total ~ mode)
+```
+
+```{r travel5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Eventually, we will want to look at the results of the ANOVA, but for now, let's also take a look at the residuals. Remember that the residual for the full model is
+
+$$e_i = y_{ik} - \bar{y}_k$$
+
+That is, the residual is the difference between an observation in group $k$ and the mean of group $k$. We could make our way through calculating the residual for each point, but we don't need to! The `resid()` function will calculate the residuals for you. Apply `resid()` to `mfull_travel`. 
+
+```{r prepare-travel3, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel <- lm(data = TravelMode, total ~ mode)
+```
+
+```{r travel6, exercise = TRUE, exercise.setup = "prepare-travel3"}
+resid(mfull_travel)
+```
+
+You can see here that each residual has been calculated--to make the residual plot, add them to `TravelMode` using `dplyr` syntax (name the new column `Residuals`).
+
+```{r travel7, exercise = TRUE, exercise.setup = "prepare-travel4"}
+TravelMode <- TravelMode %>%
+  mutate()
+```
+
+```{r travel7-solution}
+TravelMode <- TravelMode %>%
+  mutate(Residuals = resid(mfull_travel))
+```
+
+```{r travel7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, using `geom_point()`, create a residual plot using `ggplot2`. The residuals belong on the $y$-axis, and the groups belong on the $x$-axis (I have also colored by group).
+
+```{r prepare-travel4, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel <- lm(data = TravelMode, total ~ mode)
+
+TravelMode <- TravelMode %>%
+  mutate(Residuals = resid(mfull_travel))
+```
+
+```{r travel8, exercise = TRUE, exercise.setup = "prepare-travel4"}
+ggplot(data = , aes(x = , y = , color = )) +
+  geom_point()
+```
+
+```{r travel8-solution}
+ggplot(data = TravelMode, aes(x = mode, y = Residuals, color = mode)) +
+  geom_point()
+```
+
+```{r travel8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+One thing we discussed in class is the idea of a "wedge-shaped" pattern, which alerts us to the need for transforms! You can kind of see the wedge-shape here, but to see it better, we should be looking at the residuals against the values of the means for each group (not just equally spaced as they are here). The `predict()` function returns the means for each observation depending on their group--apply it to `mfull_travel`.
+
+```{r travel9, exercise = TRUE, exercise.setup = "prepare-travel3"}
+predict(mfull_travel)
+```
+
+Now, add the means to `TravelMode` using `dplyr` syntax (name the new column `Fitted`).
+
+```{r travel10, exercise = TRUE, exercise.setup = "prepare-travel4"}
+TravelMode <- TravelMode %>%
+  mutate()
+```
+
+```{r travel10-solution}
+TravelMode <- TravelMode %>%
+  mutate(Fitted = predict(mfull_travel))
+```
+
+```{r travel10-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Create a new scatterplot with `Fitted` on the $x$-axis.
+
+```{r prepare-travel5, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel <- lm(data = TravelMode, total ~ mode)
+
+TravelMode <- TravelMode %>%
+  mutate(Residuals = resid(mfull_travel))
+
+TravelMode <- TravelMode %>%
+  mutate(Fitted = predict(mfull_travel))
+```
+
+```{r travel11, exercise = TRUE, exercise.setup = "prepare-travel5"}
+ggplot(data = TravelMode, aes()) +
+  geom_point()
+```
+
+```{r travel11-solution}
+ggplot(data = TravelMode, aes(x = Fitted, y = Residuals, color = mode)) +
+  geom_point()
+```
+
+```{r travel11-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+You can see the triangular pattern a bit more! However, that felt like a lot of work--there is a shortcut! Instead of supplying the original dataframe to `ggplot()` (in this example, `TravelMode`), we can use the fitted model directly (in this example, `mfull_travel`). Then, NO MATTER WHAT, you can supply  `x = .fitted` and `y = .resid`. See an example below.
+
+```{r travel12, exercise = TRUE, exercise.setup = "prepare-travel5"}
+ggplot(data = mfull_travel, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+The wedge-shaped pattern is more clear in this graph, plus, we knew something is wrong based on the summary statistics and the boxplots. Let's try a transform--since our response variable is time, we can use `1/total` (this can be interpreted as the travel speed). Create boxplots of the "travel speed" for each travel mode using `ggplot2`.
+
+```{r travel13, exercise = TRUE, exercise.setup = "prepare-travel5"}
+ggplot(data = , aes()) +
+  geom_boxplot()
+```
+
+```{r travel13-solution}
+ggplot(data = TravelMode, aes(x = mode, y = 1/total, fill = mode)) +
+  geom_boxplot()
+```
+
+```{r travel13-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, calculate the summary statistics.
+
+```{r travel14, exercise = TRUE, exercise.setup = "prepare-travel5"}
+TravelMode %>%
+  group_by() %>%
+  summarize()
+```
+
+```{r travel14-solution}
+TravelMode %>%
+  group_by(mode) %>%
+  summarize(Mean = mean(1/total), SD = sd(1/total), n = n())
+```
+
+```{r travel14-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+The standard deviations are somewhat better (roughly only twice as big as each other, rather than four times as large). The boxplots don't look great--let's proceed with a residual plot to see if there are problems we can't see with just them.
+
+First, save a model predicting travel speed from `mode`. Save it as `mfull_travel2`.
+
+```{r travel15, exercise = TRUE, exercise.setup = "prepare-travel5"}
+mfull_travel2
+```
+
+```{r travel15-solution}
+mfull_travel2 <- lm(data = TravelMode, 1/total ~ mode)
+```
+
+```{r travel15-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, using the "shortcut method", create a residual plot. 
+
+```{r prepare-travel6, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel2 <- lm(data = TravelMode, 1/total ~ mode)
+```
+
+```{r travel16, exercise = TRUE, exercise.setup = "prepare-travel6"}
+ggplot(data = , aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r travel16-solution}
+ggplot(data = mfull_travel2, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r travel16-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+This looks even more wedge-shaped than before! Remember that the wedge-shape can be commonly fixed with a log transform. It is okay to apply more than one, so use `ggplot2` to create boxplots of the log "travel speed".
+
+```{r travel17, exercise = TRUE, exercise.setup = "prepare-travel6"}
+ggplot() +
+  geom_boxplot()
+```
+
+```{r travel17-solution}
+ggplot(data = TravelMode, aes(x = mode, y = log(1/total), fill = mode)) +
+  geom_boxplot()
+```
+
+```{r travel17-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, calculate the summary statistics. 
+
+```{r travel18, exercise = TRUE, exercise.setup = "prepare-travel6"}
+TravelMode
+```
+
+```{r travel18-solution}
+TravelMode %>%
+  group_by(mode) %>%
+  summarize(Mean = mean(log(1/total)), SD = sd(log(1/total)), n = n())
+```
+
+```{r travel18-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Okay, better--I am cautiously optimistic. Let's confirm with residual plots! First, fit a model predicting log "travel speed" from travel mode. Save it as `mfull_travel3`.
+
+```{r travel19, exercise = TRUE, exercise.setup = "prepare-travel6"}
+
+```
+
+```{r travel19-solution}
+mfull_travel3 <- lm(data = TravelMode, log(1/total) ~ mode)
+```
+
+```{r travel19-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r prepare-travel7, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel3 <- lm(data = TravelMode, log(1/total) ~ mode)
+```
+
+Now, create the residual plot using the "shortcut method".
+
+```{r travel20, exercise = TRUE, exercise.setup = "prepare-travel7"}
+ggplot(data = , aes(x = , y = )) +
+  geom_point()
+```
+
+```{r travel20-solution}
+ggplot(data = mfull_travel3, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+
+```{r travel20-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Much, MUCH better! Now that you have worked through the assumptions, we apply the ANOVA test. 
+
+```{r travel21, echo = F}
+question("What are the correct hypotheses for testing to see if any one of the travel modes has a different mean log travel speed?",
+  answer("$H_0: \\mu_{air} = \\mu_{train} = \\mu_{bus} = \\mu_{car}$ vs. $H_A:$ At least one $\\mu$ is different.", correct = TRUE),
+  answer("$H_0: \\mu_{air} = \\mu_{train} = \\mu_{bus} = \\mu_{car}$ vs. $H_A: \\mu_{air} \\neq \\mu_{train} \\neq \\mu_{bus} \\neq \\mu_{car}$"),
+  answer("$H_0: g = 0$ vs. $H_A: g \\neq 0$."),
+  answer("$H_0: \\gamma = 0$ vs. $H_A: \\gamma \\neq 0$."),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+Is there evidence that at least one of the means of the log "travel speeds" is different?
+
+```{r travel22, exercise = TRUE, exercise.setup = "prepare-travel7"}
+
+```
+
+```{r travel22-solution}
+anova(mfull_travel3)
+```
+
+```{r travel22-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+In your first meeting, the officials who were in charge of collecting the dataset mentioned that they were interested in knowing if traveling via car is associated with different times than traveling via air, train, or bus. Traveling by car can be slow due to traffic, but in each of the other modes, passengers are required to spend time waiting in the terminal (thus making the time much longer). They want to know if there is reason to believe the mean log travel speeds between these two sets of groups are different. 
+
+```{r travel23, echo = F}
+question("What are the correct hypotheses for testing to see if cars have a different mean log travel speed than modes where passengers must spend time waiting in a terminal?",
+  answer("$H_0: \\mu_{air} = \\mu_{train} = \\mu_{bus} = \\mu_{car}$ vs. $H_A:$ At least one $\\mu$ is different."),
+  answer("$H_0: \\mu_{air} = \\mu_{train} = \\mu_{bus} = \\mu_{car}$ vs. $H_A: \\mu_{air} \\neq \\mu_{train} \\neq \\mu_{bus} \\neq \\mu_{car}$"),
+  answer("$H_0: g = 0$ vs. $H_A: g \\neq 0$."),
+  answer("$H_0: \\gamma = 0$ vs. $H_A: \\gamma \\neq 0$.", correct = TRUE),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+Refresh yourself on the levels of `mode` using `levels()`. 
+
+```{r travel24, exercise = TRUE, exercise.setup = "prepare-travel7"}
+levels()
+```
+
+```{r travel24-solution}
+levels(TravelMode$mode)
+```
+
+```{r travel24-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Based on these levels and the information above, what are the appropriate coefficients/weights for this dataset? Save them as `K`.
+
+```{r travel25, exercise = TRUE, exercise.setup = "prepare-travel7"}
+K <- matrix(c(), nrow = 1)
+```
+
+```{r travel25-solution}
+K <- matrix(c(1/3, 1/3, 1/3, -1), nrow = 1)
+```
+
+```{r travel25-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, using `K`, convert your model to the format required for a contrast. Save it as `mfull_travel3.glht`.
+
+```{r prepare-travel8, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel3 <- lm(data = TravelMode, log(1/total) ~ mode)
+
+K <- matrix(c(1/3, 1/3, 1/3, -1), nrow = 1)
+```
+
+```{r travel26, exercise = TRUE, exercise.setup = "prepare-travel8"}
+mfull_travel3.glht <- glht(, linfct = mcp( = ))
+```
+
+```{r travel26-solution}
+mfull_travel3.glht <- glht(mfull_travel3, linfct = mcp(mode = K))
+```
+
+```{r travel26-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Find the confidence interval for the contrast (remember the default level is 0.95). Is there evidence of a significant difference?
+
+```{r prepare-travel9, message = FALSE}
+library(AER)
+data(TravelMode)
+TravelMode <- TravelMode %>%
+  mutate(total = wait + travel)
+
+mfull_travel3 <- lm(data = TravelMode, log(1/total) ~ mode)
+
+K <- matrix(c(1/3, 1/3, 1/3, -1), nrow = 1)
+
+mfull_travel3.glht <- glht(mfull_travel3, linfct = mcp(mode = K))
+```
+
+```{r travel27, exercise = TRUE, exercise.setup = "prepare-travel9"}
+confint()
+```
+
+```{r travel27-solution}
+confint(mfull_travel3.glht)
+```
+
+```{r travel27-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Just for fun, let's think about the p-value associated with the log travel speed. Before you do ANY math, do you think the p-value is less than 0.05?
+
+We can calculate the p-value easily with the `summary()` command (apply it to the converted model). Does the p-value match with what you thought?
+
+```{r travel28, exercise = TRUE, exercise.setup = "prepare-travel9"}
+summary()
+```
+
+```{r travel28-solution}
+summary(mfull_travel3.glht)
+```
+
+```{r travel28-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+
+
+
+

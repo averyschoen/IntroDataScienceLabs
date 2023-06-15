@@ -1,0 +1,507 @@
+---
+title: "Lab 1"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(MASS)
+library(tidyverse)
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+```
+
+## Goals
+
+Your goal is to get some practice working with datasets in R. The idea is to create some graphs, practice using the `tidyverse`, and run a 1-sample $t$-test on a dataset describing housing prices in suburbs of Boston.
+
+## Part 1: Loading Packages
+
+R comes with a decent amount of built-in functionality, but to do anything useful you will need to install and load **packages** that contain additional functionality. You only need to install a package once, which can be done in the lower righthand window in RStudio under the "Packages" tab. 
+
+Packages must be loaded any time you want to use them in an R document. You load packages with the `library` command.  For this lab, we will need a package that adds extra functionality to R: `tidyverse` (which includes `ggplot2`, which we use for graphics, and `dplyr`, home to the pipe operator `%>%`).  Calls to load this package are in the code chunk below. Go ahead and run this code chunk now.
+
+```{r packages, exercise = TRUE, message = FALSE}
+library(tidyverse)
+```
+
+<div id="loadpackages-hint">
+**Hint:** If this chunk is not working when you input it into R, check to make sure the packages are installed!
+</div>
+
+## Part 2: Reading in Data
+
+The following R code reads in the dataset describing housing prices in suburbs of Boston. Think of a dataframe as R's way of representing a spreadsheet - it's the most common way of storing a data set in R.  The original spreadsheet can be stored in multiple places: as a file on your local machine, in an R package, or on the internet. 
+
+Today, we will focus on using datasets in R packages. Let's familiarize ourself with the R package containing several famous datasets commonly used in R, `MASS`. Once we install and load the `MASS` package, we can immediately access the datasets. 
+
+Run the code below now to read in the data set.  No need to modify this code.
+
+```{r Boston, exercise = TRUE, message = FALSE}
+library(MASS)
+data(Boston)
+```
+
+## Part 3: Exploratory Data Analysis
+
+Use the `dim()` function to find the number of rows (observational units) and columns (variables) in the data set.
+
+```{r dim, exercise = TRUE, message = FALSE}
+
+```
+
+```{r dim-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+dim(Boston)
+```
+
+```{r dim-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Use the `colnames()` function to identify the variables contained in the dataset, and the help menu (`?`) for more information on each variable.
+
+```{r colnames, exercise = TRUE, message = FALSE}
+
+```
+
+```{r colnames-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+colnames(Boston)
+```
+
+```{r colnames-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Use the `glimpse()` function to get a look at the data. Notice that `glimpse()` gives you a little bit of everything, including the dimensions and column names in this dataframe!
+
+```{r glimpse, exercise = TRUE, message = FALSE}
+
+```
+
+```{r glimpse-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+glimpse(Boston)
+```
+
+```{r glimpse-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+The `Boston` dataframe includes measurements on 506 towns in the suburbs of Boston. We are going to focus on the variable `age`, which records the proportion of houses in each town built before 1940.
+
+Let's work through the commands that we used in class. First, use the dollar sign operator to print out the `age` column from the `Boston` dataframe.
+
+```{r prepare-sumstats}
+mean_age <- mean(Boston$age)
+s_age <- sd(Boston$age)
+```
+
+```{r sumstats1, exercise = TRUE, message = FALSE, exercise.setup = "prepare-sumstats"}
+
+```
+
+```{r sumstats1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, Boston$age))
+})
+```
+
+Now, apply the `mean()` function to `age`. What is the average proportion of houses built before 1940?
+
+```{r sumstats2, exercise = TRUE, message = FALSE, exercise.setup = "prepare-sumstats"}
+
+```
+
+```{r sumstats2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, mean(Boston$age)))
+})
+```
+
+Now, let's save the mean as `mean_age`. To save a mean as an object in R, use the right arrow (`<-`). 
+
+```{r sumstats3, exercise = TRUE, message = FALSE, exercise.setup = "prepare-sumstats"}
+mean_age <- 
+```
+
+```{r sumstats3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+mean_age <- mean(Boston$age)
+```
+
+```{r sumstats3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Notice that there is no value printed once you save it as an object. If you want to print the value, you can either surround the entire line with parentheses (like I did in class) or you can type the name of the object and hit enter. Try it both ways!
+
+We also need to calculate and save the standard deviation of the object. Save it as `s_age`.
+
+```{r sumstats4, exercise = TRUE, message = FALSE, exercise.setup = "prepare-sumstats"}
+s_age <- 
+```
+
+```{r sumstats4-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+s_age <- sd(Boston$age)
+```
+
+```{r sumstats4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+All of these formulas are base R commands, which means they are built into R. Let's take a look at how we might calculate these values using the `tidyverse`, a suite of packages designed to help you create code that is both easy to read and reproduce.
+
+An important part of the `tidyverse` is the pipe operator--`%>%`. The pipe operator passes the objects on the left hand side to the functions on the right hand side. An example is shown below. 
+
+```{r, eval = FALSE}
+object %>% function()
+```
+
+The object can be any kind of object, but we will focus mostly on dataframes. The functions can be any function, but one of the ones we will use most frequently is the `summarize()` function. The `summarize()` function creates a new dataframe with your chosen summary statistics. Let's look at an example. Run the following code chunk:
+
+```{r sumstats5, exercise = TRUE}
+Boston %>%
+   summarize(mean(age))
+```
+
+At first glance, this doesn't seem any more useful than using `mean()` directly on `Boston$age`. But you can see that it does get rid of the confusing dollar sign syntax! In addition, you can summarize multiple variables at once, like the code chunk below. 
+
+```{r sumstats6, exercise = TRUE}
+Boston %>%
+   summarize(mean(age), mean(zn), mean(indus))
+```
+
+This dataframe returns the mean of `age`, the proportion of housing units built before 1940, as well as the mean of `zn`, the proportion of residential land zoned for lots over 25,000 square feet, and the mean of `indus`, the proportion of non-retail business acres per town.
+
+You can also apply multiple functions, like the code chunk below:
+
+```{r sumstats7, exercise = TRUE}
+Boston %>%
+   summarize(mean(age), sd(age), n())
+```
+
+Note that the function `n()` gives you the number of observations. I personally think this feature is really nice for creating data analysis reports directly in R--usually, you want to include some type of summary statistics table, and eventually we will get to making super fancy ones that are formatted nicely. 
+
+You can also rename the statistics, like the code chunk below:
+
+```{r sumstats8, exercise = TRUE}
+Boston %>%
+   summarize(Mean = mean(age), SD = sd(age), n = n())
+```
+
+Again, this comes in handy for making nice tables, which will be useful later. For now, familiarize yourself with this format and make sure you can recreate it on your homework. 
+
+## Part 4: Creating Plots
+
+First, let's create a graph to show the distribution of median housing prices. In this class, we will be using the `ggplot2` graphics package--also part of `tidyverse`! `ggplot2` is "a system for declaratively creating graphics, based on The Grammar of Graphics"--for more information, see \url{https://ggplot2.tidyverse.org/}. 
+
+Every time you create a graph using `ggplot2`, you must:
+
+* Provide the data, 
+* Tell `ggplot2` how to map variables to aesthetics, and
+* Decide what graphical primitives to use.
+
+In this case, "aesthetics" means the visual characteristics of the graph, like what variable should be on the $x$- and $y$-axes, the colours of the graphs, the axis labels, etc. "Graphical primitives" can be several different things, but for now, it means what type of graph you want to use, such as a histogram or scatterplot. `ggplot2` takes care of the rest!  It takes some practice, but in my opinion, the graphs are more elegant and clean than the graphs you would make with base R. 
+
+### Creating Fields for Graphs
+
+To start creating a graph, we need to write a statement using the function `ggplot()`. Inside the function, we supply two things: the dataset we want to use (`data = Boston`), and the aesthetic mapping (further nested inside the `aes()` function.)
+
+```{r ggplot1, exercise = TRUE, message = FALSE}
+ggplot(data = Boston, aes(x = age))
+
+```
+
+When you run this code, the only thing that should appear is a big blank box, with the x-axis labeled `age`. This is because we haven't added a **geom** yet. 
+
+### Adding Geoms
+
+A geom is a command representing the type of plot we want. They are literally "added" to the first line of code using the `+`. 
+
+```{r ggplot2, exercise = TRUE}
+ggplot(data = Boston, aes(x = age)) + 
+   geom_histogram()
+```
+
+Now, you should have a histogram! For more information on the different types of geoms, see this `ggplot2` [cheat sheet](https://www.rstudio.com/resources/cheatsheets/)--I find it so useful that I keep a laminated copy on my desk. 
+
+### Histogram Bins
+
+Do you see a warning message saying "`stat_bin() using bins = 30. Pick better value with binwidth`"?   
+
+Add a new argument, `bins = 15`, into the `geom_histogram()` function. What happens to the histogram? What happens if you change the number of bins to 10? 5?
+
+```{r ggplot3, exercise = TRUE, message = FALSE}
+ggplot(data = Boston, aes(x = age)) + 
+   geom_histogram(bins = 15)
+```
+
+```{r ggplot3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+ggplot(data = Boston, aes(x = age)) + 
+   geom_histogram(bins = 5)
+```
+
+```{r ggplot3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+The `bins` argument dictates how many bars are contained in the histogram. The default is 30 bins, but you may wish to change it--a good rule of thumb is rounding the square root of the sample size (in this case, 22). 
+
+Play around with `ggplot()`. Can you change the geom to `geom_density()`? What about the $x$- and $y$-axis labels? The color of the bars?
+
+## Part 5: $t$-test and confidence interval
+
+Regardless of the assumptions, proceed with the analysis. Say we want to to see if the average proportion of houses built before 1940 for suburbs of Boston is [greater than 13.5](https://www.governing.com/archive/age-year-built-for-homes-in-cities.html), the proportion of houses built before 1940 in the entire US (since Boston is generally considered to be an older American city). 
+
+```{r ttest1, echo = F}
+question("What should the hypotheses for this test be?",
+  answer("$H_0: \\mu \\leq 13.5 \\;  vs. \\;  H_A: \\mu > 13.5$", correct = TRUE),
+  answer("$H_0: \\mu \\geq 13.5 \\; vs. \\; H_A: \\mu < 13.5$"),
+  answer("$H_0: \\mu = 13.5 \\; vs. \\; H_A: \\mu \\neq 13.5$"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+Let's work one time through a manual calculation. Recall that we saved the mean and standard deviation as `mean_age` and `s_age`. First, calculate the standard error using the formula 
+
+$$SE = \frac{s}{\sqrt{n}}.$$
+Save it as `SE_age`.
+
+```{r prepare-ttest}
+mean_age <- mean(Boston$age)
+s_age <- sd(Boston$age)
+SE_age <- s_age/sqrt(506)
+t_age <- (mean_age - 13.5)/SE_age
+t_star <- qt(0.95, df = 505)
+MoE_age <- SE_age*t_star
+```
+
+```{r ttest2, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+SE_age <- 
+```
+
+```{r ttest2-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+SE_age <- s_age/sqrt(506)
+```
+
+```{r ttest2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, calculate the $t$-score using 
+
+$$t = \frac{\bar{x}-\mu}{SE}.$$
+Save it as `t_age`. 
+
+```{r ttest3, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+t_age <- 
+```
+
+```{r ttest3-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+t_age <- (mean_age - 13.5)/SE_age
+```
+
+```{r ttest3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, we can calculate the p-value. 
+
+```{r ttest4, echo = F}
+question("First, what are the appropriate degrees of freedom for this $t$-test?",
+  answer("$df = 13$"),
+  answer("$df = 14$"),
+  answer("$df = 506$"),
+  answer("$df = 505$", correct = TRUE),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+Now we can plug in `t_age` and the degrees of freedom into `pt()` to calculate the p-value. Remember that the p-value is the probability of observing a result as extreme or more extreme than the value from our sample assuming that the null hypothesis is true. In the case of a one-sided, upper-tail test we are worried about "extreme results" on the upper side of the distribution.
+
+The `pt()` function calculates the area under the curve to in the upper or lower tail (depending on the options you select). You input the $t$-score, the degrees of freedom, and in this case, `lower.tail = FALSE` because we are interested in the upper area.
+
+```{r ttest5, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+pt(q = , df = , lower.tail = FALSE)
+```
+
+```{r ttest5-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+pt(q = t_age, df = 505, lower.tail = FALSE)
+```
+
+```{r ttest5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, set up and run the necessary R code below to conduct the $t$-test using `t.test()` to confirm the results match.
+
+```{r ttest6, exercise = TRUE, message = FALSE}
+t.test()
+```
+
+```{r ttest6-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+t.test(Boston$age, mu = 13.5, alternative = "g")
+```
+
+```{r ttest6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r ttest7, echo = F}
+question("Based on the p-value, would you reject or fail to reject the null hypothesis at a 10% significance level?",
+  answer("Fail to Reject"),
+  answer("Reject", correct = TRUE),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+Make sure you know how to write a conclusion for this test in the context of the problem!
+
+When we reject the null hypothesis, it is generally a good idea to report a confidence interval for the mean. I like to give two-sided intervals--note that R reports a one-sided interval if you pick the one-sided alternative, so you will need to redo the entire calculation. 
+
+We'll work through things manually one more time. We've already saved the mean and standard error, so all we need is the $t^*_df$ (using the same degrees of freedom as before). First, we need to calculate the percentile that relates the confidence interval.
+
+This two-sided, 95\% confidence interval extends 1.964673 standard errors on either side--we choose 1.964673 because 95\% of the area under the $t$-curve with 505 degrees of freedom is between -1.964673 and 1.964673 (look how close to a normal curve this is!!).  
+
+If 95\% of the area is between -1.964673 and 1.964673, then 5\% of the area is on the outside. Remember also that the $t$-distribution is perfectly symmetric, so we can evenly divide the 5\% of area on the outside into two pieces... 2.5\% below -1.964673, and 2.5\% above 1.964673. 
+
+```{r echo = F, fig.height = 4}
+ggplot(NULL, aes(c(-3,3))) +
+ geom_area(stat = "function", fun = dt, args = list(df = 505), fill = "lightgray", xlim = c(-3, 3)) +
+ geom_area(stat = "function", fun = dt, args = list(df = 505), fill = "dodgerblue3", xlim = c(qt(0.025, 505), qt(0.975, 505))) +
+ annotate("text", x = 0, y = 0.024, label = "95%", color = "gray20", size = 9) +
+ annotate("text", x = -2.16, y = 0.0165, label = "2.5%", color = "gray20", size = 4) +
+ annotate("text", x = 2.16, y = 0.0165, label = "2.5%", color = "gray20", size = 4) +
+ scale_x_continuous(name = "", breaks = c()) +
+ scale_y_continuous(name = "", limits = c(0, 0.42)) + 
+ theme(legend.position = "none", axis.text.y=element_blank(), text = element_text(size=20), axis.text.x = element_text(hjust=1))
+```
+
+Then, the formula for the percentile required for a $(100-\alpha)\%$ confidence interval is $1-\frac{\alpha}{2}$. For example, a $95\%$ confidence interval uses $\alpha = 0.05$, and the percentile required is 0.975. 
+
+```{r percentile1, echo=FALSE}
+question("What percentile should be used for a 70% confidence interval?",
+  answer("0.85", correct = TRUE),
+  answer("0.7"),
+  answer("0.3"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+```{r percentile2, echo=FALSE}
+question("What percentile should be used for a 46% confidence interval?",
+  answer("0.73", correct = TRUE),
+  answer("0.54"),
+  answer("0.46"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+```{r percentile3, echo=FALSE}
+question("What percentile should be used for a 82% confidence interval?",
+  answer("0.91", correct = TRUE),
+  answer("0.82"),
+  answer("0.15"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+Find the $t^*_{df}$ used for a $55\%$ confidence interval with 20 degrees of freedom. 
+
+```{r percentile4, exercise = TRUE}
+
+```
+
+```{r percentile4-solution, message = FALSE, warning = FALSE}
+qt(1-0.45/2, df = 20)
+```
+
+```{r percentile4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Find the $t^*_{df}$ used for a $38\%$ confidence interval with 89 degrees of freedom.
+
+```{r percentile5, exercise = TRUE}
+
+```
+
+```{r percentile5-solution, message = FALSE, warning = FALSE}
+qt(1-0.62/2, df = 89)
+```
+
+```{r percentile5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, calculate the $t^*$ for a 90\% confidence interval with 505 degrees of freedom. Save it as `t_star1`.
+
+```{r ttest8, exercise = TRUE}
+t_star <- 
+```
+
+```{r ttest8-solution, message = FALSE, warning = FALSE}
+t_star <- qt(1-0.1/2, df = 505)
+```
+
+```{r ttest8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, calculate the margin of error. Save it as `MoE_age`.
+
+```{r ttest9, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+MoE_age <-
+```
+
+```{r ttest9-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+MoE_age <- t_star*SE_age
+```
+
+```{r ttest9-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Use the margin of error and the sample mean to calculate the upper and lower bounds of the interval. 
+
+```{r ttest10, exercise = TRUE, message = FALSE, exercise.setup = "prepare-ttest"}
+
+```
+
+```{r ttest10-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+mean_age - MoE_age
+mean_age + MoE_age
+```
+
+```{r ttest10-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Confirm the bounds of the interval using `t.test()`.
+
+```{r ttest11, exercise = TRUE, message = FALSE}
+t.test()
+```
+
+```{r ttest11-solution, message = FALSE, warning = FALSE, echo = FALSE, echo = FALSE}
+t.test(Boston$age, mu = 13.5, conf.level = 0.9)$conf.int
+```
+
+```{r ttest11-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Make sure you know how to write a conclusion for this interval in the context of the problem!
+
+Now, revisit your plots. Does this analysis satisfy the assumptions we usually make for a $t$-test? Why or why not?
+
+
+
+

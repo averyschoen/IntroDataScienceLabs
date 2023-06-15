@@ -1,0 +1,1044 @@
+---
+title: "Lab 5"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(ggplot2)
+library(gradethis)
+library(learnr)
+library(MASS)
+library(multcomp)
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+bacterial_soap <- read.csv("https://nhorton.people.amherst.edu/sdm4/data/Bacterial_Soap.csv")
+names(bacterial_soap) <- c("bacterial_counts", "method")
+
+```
+
+## Goals
+
+Your goal is to carry out an ANOVA analysis from start to finish, including checking assumptions, the $F$-test for ANOVA, and setting up weights for contrasts. 
+
+## Part 1: Loading Packages
+
+Don't forget, packages must be loaded any time you want to use them in an R document. For this lab, we will continue using `readr`, `dplyr`, and `ggplot2`, but we will also load `gmodels`, which allows us to fit contrasts. Calls to load these packages are in the code chunk below. Go ahead and run this code chunk now.
+
+```{r loadpackages, exercise = T}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(multcomp)
+```
+
+## Part 2: Reading in Data
+
+The following R code reads in the data set from a hand washing study and stores it in a dataframe called `bacterial_soap`. Then, it renames the variables to `bacterial_counts` and `method`. Run the code below now to read in the data set.  No need to modify this code, but remember how to use this function to read in data in the future!
+
+```{r bacterial_soap, exercise = T}
+bacterial_soap <- read.csv("https://nhorton.people.amherst.edu/sdm4/data/Bacterial_Soap.csv", stringsAsFactors = TRUE)
+names(bacterial_soap) <- c("bacterial_counts", "method")
+```
+
+We will also work with a dataset from a study run by a bank. The bank measures the time (`Time`) it takes each teller (`Teller`) to serve each customer. 
+
+```{r tellers, exercise = T}
+tellers <- read.csv("https://dasl.datadescription.com/download/data/3478",
+                    stringsAsFactors = TRUE, sep = "\t")
+tellers$Teller <- as.factor(tellers$Teller)
+```
+
+Finally, we will work with a dataset from the Current Population Survey, run by the US Census Bureau, and stores it in a dataframe called `cps85`. The dataset contains information on `wage`, which describes the respondent's wages recorded in US dollars per hour, and `sector`, which can be thought of as the type of job the respondent has. There are many variables in this dataset--read more at the [dataset documentation](https://vincentarelbundock.github.io/Rdatasets/doc/mosaicData/CPS85.html).  Run the code below now to read in the data set.  No need to modify this code, but remember how to use this function to read in data in the future!
+
+```{r cps85, exercise = T}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+```
+
+\textcolor{red}{\textbf{Hint:} Note the extra texttt{stringsAsFactors} argument--this means that you don't have to convert the character strings to factors like the last lab!}
+
+## Part 3: Always, Sometimes, Never
+
+On the upcoming test (and in the quizzes), there will be a section of "Always, Sometimes, Never" questions--these are similar to True/False questions, but there are three options rather than two. 
+
+You will be given a statement, which is always, sometimes, or never true. Your job is to select the correct option, depending on the truth of the statement. These questions can be quite difficult, so let's talk about some strategy!
+
+First, consider whether the statement is generally true (Always) or false (Never). You can do this by testing the statement and eliminating one option. 
+
+```{r ASN1, echo = F}
+question("A hypothesis test rejected at the 1% significance level will be rejected at the 5% significance level.",
+  answer("Always (True)", correct = TRUE),
+  answer("Never (False)"),
+  allow_retry = T
+)
+```
+
+In the case of the statement above, we know that if a test is rejected at the 1\% level, the p-value must have been less than 0.01. Any value less than 0.01 is *also always* less than 0.05, because 0.01 is less than 0.05 (mathematically speaking, our hypothetical p-value $< 0.01 < 0.05$). So we would mark the statement as generally true. 
+
+Then, once we choose a general direction, try to find an example *and* a counter example. Our example p-value could be 0.008--this is both less than 0.01 and less than 0.05. However, there is no such number that is greater than 0.05 and less than 0.01. Since we cannot provide a counter example, we would mark the statement as **always** true.  
+
+Now, try a new statement. 
+
+```{r ASN2, echo = F}
+question("A hypothesis test rejected at the 10% significance level will be rejected at the 1% significance level.",
+  answer("Always (True)"),
+  answer("Never (False)"),
+  answer("Neither", correct = TRUE),
+  allow_retry = T
+)
+```
+
+Is this generally true, or generally false? What are your examples and counter examples?
+
+Hopefully, you can easily think of an example, such as 0.003. However, I hope that you can just as easily come up with a counter example, such as 0.08! Because we can find a counter example, this statement is sometimes true, but not always. 
+
+```{r ASN3}
+question("A hypothesis test rejected at the 10% significance level will be rejected at the 1% significance level.",
+  answer("Always"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+When finding examples and counter examples, make sure to pay special attention to any unusual cases! If you are able to find both an example that makes the statement true and an example that makes the statement false, choose "Sometimes". 
+
+Another helpful hint is to try and clarify *exactly* when the statement is always or never true. For instance, consider the following:
+
+```{r ASN4, echo=FALSE}
+question("When we have rejected the null hypothesis, we have made a Type I error.",
+  answer("Always"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+This statement is sometimes true--why? 
+
+<div id="ASN4-hint">
+**Hint:** In this case, we have only made an error if the null hypothesis is actually true! If the null hypothesis is false, you haven't made any errors. 
+</div>
+
+Practice these other Always, Sometimes, Never questions with your group. Talk about how you arrived at each answer. 
+
+```{r ASN5, echo=FALSE}
+question("The significance level is the chance that the null hypothesis is true.",
+  answer("Always", message = "The significance level is the chance that we made a Type I error!"),
+  answer("Sometimes", message = "The significance level is the chance that we made a Type I error!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN6, echo=FALSE}
+question("A $t$-distribution with 10 degrees of freedom has thinner tails than the standard normal distribution.",
+  answer("Always", message = "Any $t$-distribution has thinner tails than any normal!"),
+  answer("Sometimes", message = "Any $t$-distribution has thinner tails than any normal!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN7, echo=FALSE}
+question("If a dataset is not normal, you cannot use a $t$-test.",
+  answer("Always", message = "What about trying to transform the data?"),
+  answer("Sometimes", message = "Yes, if you can transform the data!", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+```{r ASN8, echo=FALSE}
+question("I construct a 95% confidence interval for a mean difference that contains 0. A two-sided hypothesis test on the same data is rejected at a 5% significance level.",
+  answer("Always", message = "0 would be considered a reasonable value if it's contained in the interval--we would not ever have to reject the null!"),
+  answer("Sometimes", message = "0 would be considered a reasonable value if it's contained in the interval--we would not ever have to reject the null!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN9, echo=FALSE}
+question("Data must be independent to run a permutation test.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes", message = "We always require some type of independence, even for a permutation test!"),
+  answer("Never", message = "We always require some type of independence, even for a permutation test!"),
+  allow_retry = T
+)
+```
+
+```{r ASN10, echo=FALSE}
+question("There are $n$ degrees of freedom in a 1-sample $t$-test for a dataset with a sample size of $n$.",
+  answer("Always", message = "There are only $n-1$ degrees of freedom!"),
+  answer("Sometimes", message = "There are only $n-1$ degrees of freedom!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN11, echo=FALSE}
+question("We have made a Type II error if we rejected the null hypothesis.",
+  answer("Always", message = "Type II errors can only occur if you fail to reject the null hypothesis!"),
+  answer("Sometimes", message = "Type II errors can only occur if you fail to reject the null hypothesis!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN12, echo=FALSE}
+question("A paired $t$-test is a special case of a 1-sample $t$-test.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes", message = "As soon as you take the differences, the math for a paired $t$-test is the same as a 1-sample $t$-test!"),
+  answer("Never",  message = "As soon as you take the differences, the math for a paired $t$-test is the same as a 1-sample $t$-test!"),
+  allow_retry = T
+)
+```
+
+```{r ASN13, echo=FALSE}
+question("A 1-sample $t$-test has a two-sided alternative.",
+  answer("Always", message = "What about the problem from our lecture on 1-sample $t$-tests (1A)? There, we specifically cared that the mean wait time in the drive through had decreased."),
+  answer("Sometimes", correct = TRUE),
+  answer("Never", message = "There may be times when we are just testing for a difference!"),
+  allow_retry = T
+)
+```
+
+```{r ASN14, echo=FALSE}
+question("If you are analyzing two samples of data, you use a 2-sample $t$-test.",
+  answer("Always", message = "What if the two samples are paired?"),
+  answer("Sometimes", correct = TRUE),
+  answer("Never"),
+  allow_retry = T
+)
+```
+
+```{r ASN15, echo=FALSE}
+question("A 99% confidence interval is narrower than a 95% confidence interval.",
+  answer("Always", message = "The higher the confidence, the wider the interval!"),
+  answer("Sometimes", message = "The higher the confidence, the wider the interval!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+```{r ASN16, echo=FALSE}
+question("A $t$-distribution with 10 degrees of freedom has thicker tails than a $t$-distribution with 20 degrees of freedom.",
+  answer("Always", correct = TRUE),
+  answer("Sometimes", message = "The larger the degrees of freedom, the thinner the tails of the distribution!"),
+  answer("Never", message = "The larger the degrees of freedom, the thinner the tails of the distribution!"),
+  allow_retry = T
+)
+```
+
+```{r ASN17, echo=FALSE}
+question("A sampling distribution describes the distribution of a parameter.",
+  answer("Always", message = "A sampling distribution describes the distribution of a statistic!"),
+  answer("Sometimes", message = "A sampling distribution describes the distribution of a statistic!"),
+  answer("Never", correct = TRUE),
+  allow_retry = T
+)
+```
+
+## Part 4:  Handwashing and Bacteria
+
+```{r prepare-soap1, message = FALSE}
+bacterial_soap <- read.csv("https://nhorton.people.amherst.edu/sdm4/data/Bacterial_Soap.csv", stringsAsFactors = TRUE)
+names(bacterial_soap) <- c("bacterial_counts", "method")
+```
+
+### Hypotheses
+
+A study was conducted to examine the effectiveness of four different hand-washing methods for eliminating bacteria (pre-covid!!). Participants washed their hands with one of the methods, then the remaining bacteria were counted. First, let's look at the dataset.
+
+```{r soaphypotheses1, exercise = TRUE, exercise.setup = "prepare-soap1"}
+glimpse(bacterial_soap)
+```
+
+We are interested in seeing if any of the handwashing methods have a lower mean bacteria count than the control. 
+
+```{r soaphypotheses2, echo = F}
+question("What is the most appropriate analyses to investigate the mean bacteria counts under the methods?",
+  answer("ANOVA + Dunnett", correct = TRUE),
+  answer("ANOVA + Tukey-Kramer"),
+  answer("Paired $t$-test"),
+  answer("2-sample $t$-test"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+What are the four possible values of `method`? 
+
+```{r soaphypotheses3, exercise = TRUE, exercise.setup = "prepare-soap1"}
+
+```
+
+```{r soaphypotheses3-solution}
+levels(bacterial_soap$method)
+```
+
+```{r soaphypotheses3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="soaphypotheses2-hint">
+**Hint:** The `levels()` function will return the levels of a variable.
+</div>
+
+```{r soaphypotheses4, echo = F}
+question("What is the reference level of `method`?",
+  answer("`Alcohol Spray`", correct = TRUE),
+  answer("`Antibacterial Soap`"),
+  answer("`Soap`"),
+  answer("`Water`"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+Write code using `dplyr` syntax to relevel the `method` variable to `"Water"`. 
+
+```{r soaphypotheses5, exercise = TRUE, exercise.setup = "prepare-soap1"}
+
+```
+
+```{r soaphypotheses5-solution}
+bacterial_soap <- bacterial_soap %>%
+  mutate(method = relevel(method, ref = "Water"))
+```
+
+```{r soaphypotheses5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r soaphypotheses6, echo = F}
+question("What are the correct hypotheses for testing to see if any one of the methods has a different mean bacterial count?",
+  answer("$H_0: \\mu_{Alc} = \\mu_{AntiBac} = \\mu_{Soap} = \\mu_{water}$ vs. $H_A:$ At least one $\\mu$ is different.", correct = TRUE),
+  answer("$H_0: \\mu_{Alc} = \\mu_{AntiBac} = \\mu_{Soap} = \\mu_{water}$ vs. $H_A: \\mu_{Alc} \\neq \\mu_{AntiBac} \\neq \\mu_{Soap} \\neq \\mu_{water}$"),
+  answer("$H_0: \\bar{x}_{Alc} = \\bar{x}_{AntiBac} = \\bar{x}_{Soap} = \\bar{x}_{water}$ vs. $H_A:$ At least one $\\bar{x}$ is different."),
+  answer("$H_0: \\bar{x}_{Alc} = \\bar{x}_{AntiBac} = \\bar{x}_{Soap} = \\bar{x}_{water}$ vs. $H_A: \\bar{x}_{Alc} \\neq \\bar{x}_{AntiBac} \\neq \\bar{x}_{Soap} \\neq \\bar{x}_{water}$"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+### Summary Statistics
+
+```{r prepare-soap2, message = FALSE}
+bacterial_soap <- read.csv("https://nhorton.people.amherst.edu/sdm4/data/Bacterial_Soap.csv", stringsAsFactors = TRUE)
+names(bacterial_soap) <- c("bacterial_counts", "method")
+bacterial_soap <- bacterial_soap %>%
+  mutate(method = relevel(method, ref = "Water"))
+```
+
+Calculate the mean, standard deviation, and count for each of the four groups using `dplyr` syntax.
+
+```{r soapsumstats, exercise = TRUE, exercise.setup = "prepare-soap2"}
+bacterial_soap %>%
+  group_by() %>%
+  summarize(Mean = , SD = , n = )
+```
+
+```{r soapsumstats-solution}
+bacterial_soap %>%
+  group_by(method) %>%
+  summarize(Mean = mean(bacterial_counts), SD = sd(bacterial_counts), n = n())
+```
+
+```{r soapsumstats-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is there any reason to think the assumptions of ANOVA have been violated?
+
+### Assessing Normality
+
+Recall that we typically use boxplots as a way to visually explore datasets where we can use ANOVA. Use the code below to create a boxplot for each level of `method` in this dataset--note that your boxplots might be slightly different than mine (which means your answer will not be "correct"), which is okay! 
+
+```{r soapnormality1, exercise = TRUE, exercise.setup = "prepare-soap2"}
+ggplot(data = , aes(x = , y = , fill = )) +
+  geom_boxplot() + 
+  xlab() + 
+  ylab() 
+```
+
+```{r soapnormality1-solution}
+ggplot(data = bacterial_soap, aes(x = method, y = bacterial_counts, fill = method)) +
+  geom_boxplot() + 
+  xlab("Method") + 
+  ylab("Bacterial Count") 
+```
+
+```{r soapnormality1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Do these boxplots, in conjunction with the summary statistics in the section above give you any reason to believe we should not run an ANOVA? Sometimes it's easier to see with a density (remember that in a density you need to use `facet_grid()` or `facet_wrap()` to plot different densities for each level--I used `facet_wrap()`. 
+
+```{r soapnormality2, exercise = TRUE, exercise.setup = "prepare-soap2"}
+ggplot(data = , aes(x = , fill = )) +
+  facet_wrap(facets = vars(), nrow = 2) +
+  geom_density() + 
+  xlab() + 
+  ylab() 
+```
+
+```{r soapnormality2-solution}
+ggplot(data = bacterial_soap, aes(x = bacterial_counts, fill = method)) +
+  facet_wrap(facets = vars(method), nrow = 2) +
+  geom_density() + 
+  xlab("Method") + 
+  ylab("Frequency") 
+```
+
+```{r soapnormality2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+It's hard to tell with such a small dataset, but the only distribution that looks approximately symmetric is the distribution for antibacterial soap. The distributions for Alcohol Spray, Soap, and Water look right skewed. This is the perfect time to try a transform! Since we are working with counts, let's use `sqrt()`. What do the new densities look like?
+
+```{r soapnormality3, exercise = TRUE, exercise.setup = "prepare-soap2"}
+ggplot(data = , aes(x = , fill = )) +
+  facet_wrap(facets = vars(), nrow = 2) +
+  geom_density() + 
+  xlab() + 
+  ylab() 
+```
+
+```{r soapnormality3-solution}
+ggplot(data = bacterial_soap, aes(x = sqrt(bacterial_counts), fill = method)) +
+  facet_wrap(facets = vars(method), nrow = 2) +
+  geom_density() +  
+  xlab("Square Root of Bacterial Count") + 
+  ylab("Frequency") 
+```
+
+```{r soapnormality3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Remember that another goal of a transform is to get equal standard deviations over all groups. Do the standard deviations look more equal in the transformed data?
+
+```{r soapnormality4, exercise = TRUE, exercise.setup = "prepare-soap2"}
+bacterial_soap %>%
+  group_by() %>%
+  summarize(Mean = , SD = , n = )
+```
+
+```{r soapnormality4-solution}
+bacterial_soap %>%
+  group_by(method) %>%
+  summarize(Mean = mean(sqrt(bacterial_counts)), SD = sd(sqrt(bacterial_counts)), n = n())
+```
+
+```{r soapnormality4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### ANOVA $F$-test
+
+Let's proceed, using the square root transform as we go. First, fit the model predicting the mean square root of the bacterial count from the method. Save it as `mfull_soap`. 
+
+```{r ANOVA1, exercise = TRUE, exercise.setup = "prepare-soap2"}
+mfull_soap <- lm(data = , )
+```
+
+```{r ANOVA1-solution}
+mfull_soap <- lm(data = bacterial_soap, sqrt(bacterial_counts) ~ method)
+```
+
+```{r ANOVA1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, conduct a test to see if any of the group means are different. Remember that you already defined your full model. 
+
+```{r prepare-soap3, message = FALSE}
+bacterial_soap <- read.csv("https://nhorton.people.amherst.edu/sdm4/data/Bacterial_Soap.csv", stringsAsFactors = TRUE)
+names(bacterial_soap) <- c("bacterial_counts", "method")
+bacterial_soap <- bacterial_soap %>%
+  mutate(method = relevel(method, ref = "Water"))
+mfull_soap <- lm(data = bacterial_soap, sqrt(bacterial_counts) ~ method)
+```
+
+```{r ANOVA2, exercise = TRUE, exercise.setup = "prepare-soap3"}
+anova()
+```
+
+```{r ANOVA2-solution}
+anova(mfull_soap)
+```
+
+```{r ANOVA2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is there evidence that any of the model means are different?
+
+### Dunnett
+
+Now, we can run Dunnett's procedure to evaluate which of the means (relative to the reference level) are different. We have already loaded the `multcomp` library, changed the reference level to `"Water"` and fitted/saved `mfull_soap`--the next step is to convert `mfull_soap` using `glht()`. 
+
+Fill out the missing arguments in the code chunk below. 
+
+```{r dunnett1, exercise = TRUE, exercise.setup = "prepare-soap3"}
+mfull_soap.glht <- glht( , linfct = mcp())
+```
+
+```{r dunnett1-solution}
+mfull_soap.glht <- glht(mfull_soap, linfct = mcp(method = "Dunnett"))
+```
+
+```{r dunnett1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r prepare-soap4, message = FALSE}
+bacterial_soap <- read.csv("https://nhorton.people.amherst.edu/sdm4/data/Bacterial_Soap.csv", stringsAsFactors = TRUE)
+names(bacterial_soap) <- c("bacterial_counts", "method")
+bacterial_soap <- bacterial_soap %>%
+  mutate(method = relevel(method, ref = "Water"))
+mfull_soap <- lm(data = bacterial_soap, sqrt(bacterial_counts) ~ method)
+mfull_soap.glht <- glht(mfull_soap, linfct = mcp(method = "Dunnett"))
+```
+
+Now, use `confint()` to find the confidence intervals.
+
+```{r dunnett2, exercise = TRUE, exercise.setup = "prepare-soap4"}
+mfull_soap.glht <- glht( , linfct = mcp())
+```
+
+```{r dunnett2-solution}
+confint(mfull_soap.glht) 
+```
+
+```{r dunnett2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r dunnett3, echo = F}
+question("Based on the confidence intervals from Dunnett's procedure, are there any significant differences? If so, which? Check all that apply.",
+  answer("Yes, there are significant differences in the mean square root of bacteria count for washing with water along and washing with alcohol spray.", correct = TRUE),
+  answer("Yes, there are significant differences in the mean square root of bacteria count for washing with water along and washing with antibacterial soap."),
+  answer("Yes, there are significant differences in the mean square root of bacteria count for washing with water along and washing with soap."),
+  answer("No, there are no significant differences in the mean square root of bacteria count for washing hands with any method."),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+## Part 5: Tellers
+
+```{r prepare-tellers1, message = FALSE}
+tellers <- read.csv("https://dasl.datadescription.com/download/data/3478",
+                    stringsAsFactors = TRUE, sep = "\t")
+tellers$Teller <- as.factor(tellers$Teller)
+```
+
+### Hypotheses
+
+A bank observed the time it took for their tellers to serve customers, and is trying to see if there are any differences. First, let's look at the dataset.
+
+```{r tellershypotheses1, exercise = TRUE, exercise.setup = "prepare-tellers1"}
+glimpse(tellers)
+```
+
+```{r tellershypotheses2, echo = F}
+question("What is the most appropriate analyses for testing to see if any one of the tellers has a different mean time to serve customers?",
+  answer("ANOVA + Dunnett"),
+  answer("ANOVA + Tukey-Kramer", correct = TRUE),
+  answer("Permutation test"),
+  answer("1-sample $t$-test"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+```{r tellershypotheses3, echo = F}
+question("What are the correct hypotheses for testing to see if any one of the tellers has a different mean time to serve customers?",
+  answer("$H_0: \\mu_{1} = \\mu_{2} = \\mu_{3} = \\mu_{4} = \\mu_{5} = \\mu_{6}$ vs. $H_A:$ At least one $\\mu$ is different.", correct = TRUE),
+  answer("$H_0: \\mu_{1} = \\mu_{2} = \\mu_{3} = \\mu_{4} = \\mu_{5} = \\mu_{6}$ vs. $H_A: \\mu_{1} \\neq \\mu_{2} \\neq \\mu_{3} \\neq \\mu_{4} \\neq \\mu_{5} \\neq \\mu_{6}$"),
+  answer("$H_0: \\bar{x}_{1} = \\bar{x}_{2} = \\bar{x}_{3} = \\bar{x}_{4} = \\bar{x}_{5} = \\bar{x}{6}$ vs. $H_A:$ At least one $\\bar_{x}$ is different."),
+  answer("$H_0: \\bar{x}_{1} = \\bar{x}_{2} = \\bar{x}_{3} = \\bar{x}_{4} = \\bar{x}_{5} = \\bar{x}_{6}$ vs. $H_A: \\bar{x}_{1} \\neq \\bar{x}_{2} \\neq \\bar{x}_{3} \\neq \\bar{x}_{4} \\neq \\bar{x}_{5} \\neq \\bar{x}_{6}$"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+### Summary Statistics
+
+Calculate the mean, standard deviation, and count for each of the six groups tellers `dplyr` syntax.
+
+```{r tellerssumstats, exercise = TRUE, exercise.setup = "prepare-tellers1"}
+tellers %>%
+  group_by()
+```
+
+```{r tellerssumstats-solution}
+tellers %>%
+  group_by(Teller) %>%
+  summarize(Mean = mean(Time), SD = sd(Time), n = n())
+```
+
+```{r tellerssumstats-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is there any reason to think the assumptions of ANOVA have been violated?
+
+### Assessing Normality
+
+Recall that we typically use boxplots as a way to visually explore datasets where we can use ANOVA. Use the code below to create a boxplot for each level of `method` in this dataset--note that your boxplots might be slightly different than mine (which means your answer will not be "correct"), which is okay! 
+
+```{r tellersnormality1, exercise = TRUE, exercise.setup = "prepare-tellers1"}
+ggplot() +
+  xlab() + 
+  ylab()
+```
+
+```{r tellersnormality1-solution}
+ggplot(data = tellers, aes(x = Teller, y = Time, fill = Teller)) +
+  geom_boxplot() + 
+  xlab("Teller") + 
+  ylab("Time") 
+```
+
+```{r tellersnormality1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Do these boxplots, in conjunction with the summary statistics in the section above give you any reason to believe we should not run an ANOVA? Sometimes it's easier to see with a histogram (remember that in a histogram you need to use `facet_grid()` or `facet_wrap()` to plot different densities for each level--I used `facet_wrap()`. 
+
+```{r tellersnormality2, exercise = TRUE, exercise.setup = "prepare-tellers1"}
+ggplot() +
+  xlab() + 
+  ylab() 
+```
+
+```{r tellersnormality2-solution}
+ggplot(data = tellers, aes(x = Time, fill = Teller)) +
+  facet_wrap(facets = vars(Teller), nrow = 2) +
+  geom_histogram(bins = 6) + 
+  xlab("Teller") + 
+  ylab("Time") 
+```
+
+```{r tellersnormality2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+These look good to me so we can proceed with the untransformed data!
+
+### ANOVA $F$-test
+
+First, fit the full model (named `mfull_tellers`) predicting time from teller.
+
+```{r ANOVA3, exercise = TRUE, exercise.setup = "prepare-tellers1"}
+mfull_tellers <- lm()
+```
+
+```{r ANOVA3-solution}
+mfull_tellers <- lm(data = tellers, Time ~ Teller)
+```
+
+```{r ANOVA3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Now, conduct a test to see if any of the tellers' means are different.
+
+```{r prepare-tellers2, message = FALSE}
+tellers <- read.csv("https://dasl.datadescription.com/download/data/3478",
+                    stringsAsFactors = TRUE, sep = "\t")
+tellers$Teller <- as.factor(tellers$Teller)
+
+mfull_tellers <- lm(data = tellers, Time ~ Teller)
+```
+
+```{r ANOVA4, exercise = TRUE, exercise.setup = "prepare-tellers2"}
+
+```
+
+```{r ANOVA4-solution}
+anova(mfull_tellers)
+```
+
+```{r ANOVA4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is there evidence that any of the model means are different? Should you proceed with any post-hoc testing?
+
+## Part 6: Current Population Survey
+
+```{r prepare-cps1, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+```
+
+### Hypotheses
+
+First, let’s look at the dataset.
+
+```{r cps1, exercise = TRUE, exercise.setup = "prepare-cps1"}
+glimpse(cps85)
+```
+
+Let's say we are interested in seeing if wages depend on the type of job a person has--a.k.a., are the mean wages different for any of the sectors? 
+
+```{r cps2, echo = F}
+question("What is the most appropriate analyses to investigate the wages for different sectors?",
+  answer("ANOVA + Dunnett"),
+  answer("ANOVA + Tukey-Kramer", correct = TRUE),
+  answer("Paired $t$-test"),
+  answer("2-sample $t$-test"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+What are the possible values of `sector`? 
+
+```{r cps3, exercise = TRUE, exercise.setup = "prepare-cps1"}
+
+```
+
+```{r cps3-solution}
+levels(cps85$sector)
+```
+
+```{r cps3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r cps4, echo = F}
+question("What is the reference level of `sector`?",
+  answer("`clerical`", correct = TRUE),
+  answer("`const`"),
+  answer("`manag`"),
+  answer("`manuf`"),
+  answer("`other`"),
+  answer("`prof`"),
+  answer("`sales`"),
+  answer("`service`"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+We don't care about a reference level here--ultimately we're going to look at all pairs so it doesn't matter. No need to relevel! 
+
+```{r cps5, echo = F}
+question("What are the correct hypotheses for testing to see if any one of the sectors has a different mean wage?",
+  answer("$H_0: \\mu_{clerical} = \\mu_{const} = \\mu_{manag} = \\mu_{manuf} = \\mu_{other} = \\mu_{prof} = \\mu_{sales} = \\mu_{service}$ vs. $H_A:$ At least one $\\mu$ is different.", correct = TRUE),
+  answer("$H_0:  \\mu_{clerical} = \\mu_{const} = \\mu_{manag} = \\mu_{manuf} = \\mu_{other} = \\mu_{prof} = \\mu_{sales} = \\mu_{service}$ vs. $H_A:  \\mu_{clerical} \\neq \\mu_{const} = \\mu_{manag} \\neq \\mu_{manuf} \\neq \\mu_{other} \\neq \\mu_{prof} \\neq \\mu_{sales} \\neq \\mu_{service}$"),
+  answer("$H_0: \\bar{x}_{clerical} = \\bar{x}_{const} = \\bar{x}_{manag} = \\bar{x}_{manuf} = \\bar{x}_{other} = \\bar{x}_{prof} = \\bar{x}_{sales} = \\bar{x}_{service}$ vs. $H_A:$ At least one $\\bar{x}$ is different."),
+  answer("$H_0: \\bar{x}_{clerical} = \\bar{x}_{const} = \\bar{x}_{manag} = \\bar{x}_{manuf} = \\bar{x}_{other} = \\bar{x}_{prof} = \\bar{x}_{sales} = \\bar{x}_{service}$ vs. $H_A: \\bar{x}_{clerical} \\neq \\bar{x}_{const} \\neq \\bar{x}_{manag} \\neq \\bar{x}_{manuf} \\neq \\bar{x}_{other} \\neq \\bar{x}_{prof} \\neq \\bar{x}_{sales} \\neq \\bar{x}_{service}$"),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+### Summary Statistics
+
+Calculate the mean, standard deviation, and count for each of the four groups using `dplyr` syntax.
+
+```{r cpssumstats, exercise = TRUE, exercise.setup = "prepare-cps1"}
+
+```
+
+```{r cpssumstats-solution}
+cps85 %>%
+  group_by(sector) %>%
+  summarize(Mean = mean(wage), SD = sd(wage), n = n())
+```
+
+```{r cpssumstats-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is there any reason to think the assumptions of ANOVA have been violated?
+
+### Assessing Normality
+
+Use the code below to create a boxplot for each level of `sector` in this dataset--note that your boxplots might be slightly different than mine (which means your answer will not be "correct"), which is okay! 
+
+```{r cpsnormality1, exercise = TRUE, exercise.setup = "prepare-cps1"}
+
+```
+
+```{r cpsnormality1-solution}
+ggplot(data = cps85, aes(x = sector, y = wage, fill = sector)) +
+  geom_boxplot() + 
+  xlab("Sector") + 
+  ylab("Wage") 
+```
+
+```{r cpsnormality1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Some of the boxplots look symmetric (a.k.a., normal), but others don't. Create a density for a more detailed view (remember that in a density you need to use `facet_grid()` or `facet_wrap()` to plot different densities for each level--I used `facet_wrap()`. 
+
+```{r cpsnormality2, exercise = TRUE, exercise.setup = "prepare-cps1"}
+
+```
+
+```{r cpsnormality2-solution}
+ggplot(data = cps85, aes(x = wage, fill = sector)) +
+  facet_wrap(facets = vars(sector), nrow = 2) +
+  geom_density() + 
+  xlab("Wage") + 
+  ylab("") 
+```
+
+```{r cpsnormality2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+The densities for `manag` and `prof` look okay--but all of the others look like they have very long tails (not surprising, in money data). Let's try another transform! This time, let's use `log()`. What do the new densities look like?
+
+```{r cpsnormality3, exercise = TRUE, exercise.setup = "prepare-cps1"}
+
+```
+
+```{r cpsnormality3-solution}
+ggplot(data = cps85, aes(x = log(wage), fill = sector)) +
+  facet_wrap(facets = vars(sector), nrow = 2) +
+  geom_density() +  
+  xlab("log(Wage)") + 
+  ylab("") 
+```
+
+```{r cpsnormality3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Remember that another goal of a transform is to get equal standard deviations over all groups. Do the standard deviations look more equal in the transformed data?
+
+```{r cpsnormality4, exercise = TRUE, exercise.setup = "prepare-cps1"}
+
+```
+
+```{r cpsnormality4-solution}
+cps85 %>%
+  group_by(sector) %>%
+  summarize(Mean = mean(log(wage)), SD = sd(log(wage)), n = n())
+```
+
+```{r cpsnormality4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+### ANOVA $F$-test
+
+Let's proceed, using the log transform as we go. First, fit the model predicting the mean log wage from the sector. Save it as `mfull_cps`. 
+
+```{r ANOVA5, exercise = TRUE, exercise.setup = "prepare-cps1"}
+mfull_cps 
+```
+
+```{r ANOVA5-solution}
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+```
+
+```{r ANOVA5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r prepare-cps2, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+```
+
+Now, conduct a test to see if any of the group means are different. Remember that you already defined your full model. 
+
+```{r ANOVA6, exercise = TRUE, exercise.setup = "prepare-soap3"}
+
+```
+
+```{r ANOVA6-solution}
+anova(mfull_cps)
+```
+
+```{r ANOVA6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+Is there evidence that any of the model means are different?
+
+### Tukey-Kramer
+
+Now, we can run the Tukey-Kramer procedure to evaluate which of the means (relative to the reference level) are different. We have already loaded the `multcomp` library and fitted `mfull_cps`--the next step is to convert `mfull_cps` using `glht()`. 
+
+Fill out the missing arguments in the code chunk below. 
+
+```{r tk1, exercise = TRUE, exercise.setup = "prepare-soap3"}
+mfull_cps.glht 
+```
+
+```{r tk1-solution}
+mfull_cps.glht  <- glht(mfull_cps, linfct = mcp(sector = "Tukey"))
+```
+
+```{r tk1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r prepare-cps3, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+mfull_cps.glht  <- glht(mfull_cps, linfct = mcp(sector = "Tukey"))
+```
+
+Now, use `confint()` to find the confidence intervals.
+
+```{r tk2, exercise = TRUE, exercise.setup = "prepare-cps3"}
+
+```
+
+```{r tk2-solution}
+confint(mfull_cps.glht) 
+```
+
+```{r tk2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+```{r tk3, echo = F}
+question("Based on the confidence intervals from the Tukey-Kramer procedure, are there any significant differences? If so, which? Check all that apply.",
+  answer("Yes, there are significant differences in the log wage for `manag` and `const`."),
+  answer("Yes, there are significant differences in the log wage for `service` and `const`.", correct = TRUE),
+  answer("Yes, there are significant differences in the log wage for `prof` and `manag`."),
+  answer("Yes, there are significant differences in the log wage for `prof` and `clerical`.", correct = TRUE),
+  answer("Yes, there are significant differences in the log wage for `manuf` and `manag`.", correct = TRUE),
+  answer("Yes, there are significant differences in the log wage for `other` and `manuf`."),
+  answer("Yes, there are significant differences in the log wage for `sales` and `prof`.", correct = TRUE),
+  answer("Yes, there are significant differences in the log wage for `sales` and `other`."),
+  answer("Yes, there are significant differences in the log wage for `prof` and `const`."),
+  answer("Yes, there are significant differences in the log wage for `service` and `sales`."),
+  allow_retry = TRUE, 
+  random_answer_order = TRUE
+)
+```
+
+## Part 7: Clean Output (OPTIONAL)
+
+Obviously this output is a mess. Let's make a graph so that it is easier to look at the comparisons (FYI--you don't have to do this for your homework, but it is a nice thing to know how to do).
+
+First, extract the confidence intervals by themselves and save them as `confint_cps`. 
+
+```{r clean1, exercise = TRUE, exercise.setup = "prepare-cps3"}
+confint_cps <- confint(mfull_cps.glht)$confint
+glimpse(confint_cps)
+```
+
+```{r prepare-cps4, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+mfull_cps.glht  <- glht(mfull_cps, linfct = mcp(sector = "Tukey"))
+confint_cps <- confint(mfull_cps.glht)$confint
+```
+
+Then, save them as a data frame so they will work with `ggplot2` using `as.data.frame()`. 
+
+```{r clean2, exercise = TRUE, exercise.setup = "prepare-cps4"}
+confint_cps_df <- as.data.frame(confint_cps)
+glimpse(confint_cps_df)
+```
+
+```{r prepare-cps5, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+mfull_cps.glht  <- glht(mfull_cps, linfct = mcp(sector = "Tukey"))
+confint_cps <- confint(mfull_cps.glht)$confint
+confint_cps_df <- as.data.frame(confint_cps)
+```
+
+Now, let's create a new variable representing significance. This will require creating a logical test. We know that if the lower bound of a confidence interval is negative and the upper bound is positive, the interval contains 0 and therefore represents a difference that is not significant. We can use the `sign()` function, which returns a `1` if a value is positive or `-1` if a value is negative, in conjunction with a logical operator, to return a column with `FALSE` if an interval contains 0 and `TRUE` otherwise.
+
+```{r clean3, exercise = TRUE, exercise.setup = "prepare-cps5"}
+sign(confint_cps_df$lwr) == -1 & sign(confint_cps_df$upr) == 1
+```
+
+Let's save this column in the dataframe as `Significance`. 
+
+```{r clean4, exercise = TRUE, exercise.setup = "prepare-cps5"}
+confint_cps_df <- confint_cps_df %>%
+  mutate(Significance = sign(lwr) == -1 & sign(upr) == 1)
+glimpse(confint_cps_df)
+```
+
+```{r prepare-cps6, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+mfull_cps.glht  <- glht(mfull_cps, linfct = mcp(sector = "Tukey"))
+confint_cps <- confint(mfull_cps.glht)$confint
+confint_cps_df <- as.data.frame(confint_cps)
+confint_cps_df <- confint_cps_df %>%
+  mutate(Significance = sign(lwr) == -1 & sign(upr) == 1)
+```
+
+Now, let's create a graph using `geom_point()`. This starts as usual with a ggplot. But we notice that `geom_point()` requires an `x` argument and a `y` argument--we can treat `Estimate`, the difference in sample means as `y`--but what should our `x` be? We basically want each pair to be on the $x$-axis, so let's create a new variable, `Pair`, based off the row names of the confidence intervals. 
+
+```{r clean5, exercise = TRUE, exercise.setup = "prepare-cps6"}
+confint_cps_df <- confint_cps_df %>%
+  mutate(Pair = as.factor(rownames(confint_cps_df)))
+glimpse(confint_cps_df)
+```
+
+```{r prepare-cps7, message = FALSE}
+cps85 <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/CPS85.csv", stringsAsFactors = TRUE)
+mfull_cps <- lm(data = cps85, log(wage) ~ sector)
+mfull_cps.glht  <- glht(mfull_cps, linfct = mcp(sector = "Tukey"))
+confint_cps <- confint(mfull_cps.glht)$confint
+confint_cps_df <- as.data.frame(confint_cps)
+confint_cps_df <- confint_cps_df %>%
+  mutate(Significance = sign(lwr) == -1 & sign(upr) == 1)
+confint_cps_df <- confint_cps_df %>%
+  mutate(Pair = as.factor(rownames(confint_cps_df)))
+```
+
+Now we can make the ggplot, adding `geom_point()`. 
+
+```{r clean6, exercise = TRUE, exercise.setup = "prepare-cps7"}
+ggplot(data = confint_cps_df, aes(x = Pair, y = Estimate)) +
+  geom_point()
+```
+
+This is informative, because you can see the estimates of the differences, but not the confidence intervals--luckily, `geom_errorbar()` makes it very easy to visualize those as well. 
+
+```{r clean7, exercise = TRUE, exercise.setup = "prepare-cps7"}
+ggplot(data = confint_cps_df, aes(x = Pair, y = Estimate)) +
+  geom_point() + 
+  geom_errorbar(aes(x = Pair, ymin = lwr, ymax = upr))
+```
+
+We can even add a color and change the linetype using the `Significance` variable from before!
+
+```{r clean8, exercise = TRUE, exercise.setup = "prepare-cps7"}
+ggplot(data = confint_cps_df, aes(x = Pair, y = Estimate, color = Significance)) +
+  geom_point() + 
+  geom_errorbar(aes(x = Pair, ymin = lwr, ymax = upr, linetype = Significance))
+```
+
+Finally, we may also want to add a horizontal line for 0--this will make it easy to see which intervals contain it or not. 
+
+```{r clean9, exercise = TRUE, exercise.setup = "prepare-cps7"}
+ggplot(data = confint_cps_df, aes(x = Pair, y = Estimate, color = Significance)) +
+  geom_hline(yintercept=0, color = "darkgray", size = 2) +
+  geom_point() + 
+  geom_errorbar(aes(x = Pair, ymin = lwr, ymax = upr, linetype = Significance))
+```
+
+Last step--let's rotate our axis labels to make it easy to read. 
+
+```{r clean10, exercise = TRUE, exercise.setup = "prepare-cps7"}
+ggplot(data = confint_cps_df, aes(x = Pair, y = Estimate, color = Significance)) +
+  geom_hline(yintercept=0, color = "darkgray", size = 2) +
+  geom_point() + 
+  geom_errorbar(aes(x = Pair, ymin = lwr, ymax = upr, linetype = Significance)) + 
+    theme(axis.text.x = element_text(angle = 90))
+```
+
+This is much better! Again--you don't have to do this, but it is easy to see this is much more communicative than just the table by itself.

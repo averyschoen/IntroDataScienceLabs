@@ -1,0 +1,1319 @@
+---
+title: "Lab 8"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(gradethis)
+library(learnr)
+library(readr)
+
+tutorial_options(exercise.checker = gradethis::grade_learnr)
+
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+```
+
+## Goals
+
+Your goal is practice calculating the expected value and variance for a random variable, evaluating more probabilities, and using the Central Limit Theorem. 
+
+## Part 1: Loading Packages
+
+No new libraries today!
+
+## Part 2: Reading in Data
+
+We will be using `BirdNest`, a dataset containing observations on 84 separate species. It includes the following variables:
+
+* `Species`: Latin species name
+* `Common`:	Common species name
+* `Page`: Page in a bird manual describing the species
+* `Length`:	Mean body length for the species (in cm)
+* `Nesttype`:	Type of nest
+* `Location`:	Location of nest
+* `No.eggs`:	Number of eggs
+* `Color`:	Egg color (0=plain/solid or 1=speckled/spotted)
+* `Incubate`: Mean length of time (in days) the species incubates eggs in the nest
+* `Nestling`:	Mean length of time (in days) the species cares for babies in the nest until fledged
+* `Totcare`:	Total care time = Incubate+Nestling
+* `Closed.`:	1=closed nest (pendant, spherical, cavity, crevice, burrow), 0=open nest (saucer, cup)
+
+Use this dataset to answer the following questions. 
+
+```{r}
+BirdNest <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/Stat2Data/BirdNest.csv")
+
+BirdNest$Color <- as.factor(BirdNest$Color)
+BirdNest$Closed. <- as.factor(BirdNest$Closed.)
+```
+
+Note that I have added some extra code to make nicer graphs--if you want to practice this code on your own, make sure to run these lines as well!
+
+## Part 3: Midterm Practice
+
+### Married Women
+
+The American Community Survey estimates that 47.1% of women ages 15 years and over are married. We randomly select three women between these ages. What is the probability that the third woman selected is the only one who is married?
+
+```{r marriage1, exercise = TRUE}
+
+```
+
+```{r marriage1-solution, message = FALSE, warning = FALSE}
+dgeom(2, prob = 0.471)
+```
+
+```{r marriage1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dgeom(2, prob = 0.471)))
+})
+```
+
+<div id="marriage1-hint">
+**Hint:** What distribution should you be using with a probability of success and known sample size of 3?
+</div>
+
+What is the probability that all three randomly selected women are married? 
+
+```{r marriage2, exercise = TRUE}
+
+```
+
+```{r marriage2-solution, message = FALSE, warning = FALSE}
+dbinom(3, prob = 0.471, size = 3)
+```
+
+```{r marriage2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dbinom(3, prob = 0.471, size = 3)))
+})
+```
+
+<div id="marriage2-hint">
+**Hint:** What distribution should you be using with a probability of success and known sample size of 3?
+</div>
+
+On average, how many women would you expect to sample before selecting a married woman? 
+
+```{r marriage3, exercise = TRUE}
+
+```
+
+```{r marriage3-solution, message = FALSE, warning = FALSE}
+1/0.471
+```
+
+```{r marriage3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1/0.471))
+})
+```
+
+<div id="marriage3-hint">
+**Hint:** What distribution should you be using with a probability of success and unknown sample size?
+</div>
+
+What is the standard deviation?
+
+```{r marriage4, exercise = TRUE}
+
+```
+
+```{r marriage4-solution, message = FALSE, warning = FALSE}
+sqrt((1-0.471)/0.471^2)
+```
+
+```{r marriage4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, sqrt((1-0.471)/0.471^2)))
+})
+```
+
+<div id="marriage4-hint">
+**Hint:** What distribution should you be using with a probability of success and unknown sample size?
+</div>
+
+This exercise was inspired by OIS exercise 4.41.
+
+### Is it worth it?
+
+Andy is always looking for ways to make money fast. Lately, he has been trying to make money by gambling. Here is the game he is considering playing. The game costs $\$2$ to play. He draws a card from a deck. If he gets a number card (2-10), he wins nothing. For a jack, queen, or king, he wins $\$3$. For any ace, he wins $\$5$, and he wins an extra $\$20$ if he draws the ace of clubs. 
+
+What is the probability that he draws a number card? Type in the number below.
+
+```{r cards1, exercise = TRUE}
+
+```
+
+```{r cards1-solution, message = FALSE, warning = FALSE}
+36/52
+```
+
+```{r cards1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 36/52))
+})
+```
+
+<div id="cards1-hint">
+**Hint:** Remember that there are 4 suits (clubs, diamonds, hearts, spades) of 13 cards in a deck. 
+</div>
+
+What is the probability that he draws a jack, queen, or king? Type in the number below. 
+
+```{r cards2, exercise = TRUE}
+
+```
+
+```{r cards2-solution, message = FALSE, warning = FALSE}
+12/52
+```
+
+```{r cards2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 12/52))
+})
+```
+
+<div id="cards2-hint">
+**Hint:** Remember that there are 4 suits (clubs, diamonds, hearts, spades) of 13 cards in a deck. 
+</div>
+
+What is the probability that he draws an ace, but not the ace of clubs? Type in the number below?
+
+```{r cards3, exercise = TRUE}
+
+```
+
+```{r cards3-solution, message = FALSE, warning = FALSE}
+3/52
+```
+
+```{r cards3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 3/52))
+})
+```
+
+<div id="cards3-hint">
+**Hint:** Remember that there are 4 suits (clubs, diamonds, hearts, spades) of 13 cards in a deck. 
+</div>
+
+What is the probability that he draws the ace of clubs? Type in the number below. 
+
+```{r cards4, exercise = TRUE}
+
+```
+
+```{r cards4-solution, message = FALSE, warning = FALSE}
+1/52
+```
+
+```{r cards4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1/52))
+})
+```
+
+<div id="cards4-hint">
+**Hint:** Remember that there are 4 suits (clubs, diamonds, hearts, spades) of 13 cards in a deck. 
+</div>
+
+Is this probability distribution a valid probability distribution? How can you tell?
+
+```{r cards5, exercise = TRUE}
+
+```
+
+```{r cards5-solution, message = FALSE, warning = FALSE}
+36/52 + 12/52 + 3/52 + 1/52
+```
+
+```{r cards5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 36/52 + 12/52 + 3/52 + 1/52))
+})
+```
+
+<div id="cards5-hint">
+**Hint:** Are the events disjoint? Are the probabilities all between 0 and 1? Do they add to 1? 
+</div>
+
+What is the expected value of this distribution? Save it as `exp_cards` and print the value out so you can see it.
+
+```{r cards6, exercise = TRUE}
+
+```
+
+```{r cards6-solution, message = FALSE, warning = FALSE}
+exp_cards <- sum(c(0, 3, 5, 20)*c(36/52, 12/52, 3/52, 1/52))
+exp_cards
+```
+
+```{r cards6-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="cards6-hint">
+**Hint:** Use $E(X) = \sum_{i=1}^nx_iP(x_i)$.
+</div>
+
+What is the standard deviation of this distribution? Save it as `sd_cards` and print the value out so you can see it.
+
+```{r prepare-cards1, message = FALSE}
+exp_cards <- sum(c(0, 3, 5, 20)*c(36/52, 12/52, 3/52, 1/52))
+```
+
+```{r cards7, exercise = TRUE, exercise.setup = "prepare-cards1"}
+
+```
+
+```{r cards7-solution, message = FALSE, warning = FALSE}
+sd_cards <- sqrt(sum((c(0, 3, 5, 20)-exp_cards)^2*c(36/52, 12/52, 3/52, 1/52)))
+sd_cards
+```
+
+```{r cards7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="cards7-hint">
+**Hint:** Use $SD(X) = \sqrt{\sum_{i=1}^n(x_i-E(X))^2P(x_i)}$.
+</div>
+
+Andy has $100, and is considering playing this game 50 times. What is the standard error of the average winnings from 50 rounds of this game? Save it as `se_cards`  and print the value out so you can see it. 
+
+```{r prepare-cards2, message = FALSE}
+exp_cards <- sum(c(0, 3, 5, 20)*c(36/52, 12/52, 3/52, 1/52))
+sd_cards <- sqrt(sum((c(0, 3, 5, 20)-exp_cards)^2*c(36/52, 12/52, 3/52, 1/52)))
+```
+
+```{r cards8, exercise = TRUE, exercise.setup = "prepare-cards2"}
+
+```
+
+```{r cards8-solution, message = FALSE, warning = FALSE}
+se_cards <- sd_cards/sqrt(50)
+se_cards
+```
+
+```{r cards8-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="cards8-hint">
+**Hint:** This problem is about the standard error of an *average*, so you should be thinking about sampling distributions and the Central Limit Theorem!
+</div>
+
+Andy "wins" if the value he earns is greater than the value he pays ($\$2$). What is the probability that he wins more than $2, on average?
+
+```{r prepare-cards3, message = FALSE}
+exp_cards <- sum(c(0, 3, 5, 20)*c(36/52, 12/52, 3/52, 1/52))
+sd_cards <- sqrt(sum((c(0, 3, 5, 20)-exp_cards)^2*c(36/52, 12/52, 3/52, 1/52)))
+se_cards <- sd_cards/sqrt(50)
+```
+
+```{r cards9, exercise = TRUE, exercise.setup = "prepare-cards3"}
+
+```
+
+```{r cards9-solution, message = FALSE, warning = FALSE}
+1 - pnorm(2, mean = exp_cards, sd = se_cards)
+```
+
+```{r cards9-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1 - pnorm(2, mean = exp_cards, sd = se_cards)))
+})
+```
+
+<div id="cards9-hint">
+**Hint:** This problem is about the standard error of an *average*, so you should be thinking about sampling distributions and the Central Limit Theorem!
+</div>
+
+### Losing Bags
+
+Occasionally, airlines lose their passengers' bags. Suppose a small airline has found it that it loses bags at a rate of 2.2 per weekday. 
+
+```{r baggage1, echo=FALSE}
+question("What distribution can we reasonably use to calculate the probabilities associated with this airline's bag loss rate?",
+  answer("Poisson", correct = TRUE),
+  answer("Normal"),
+  answer("Binomial"),
+  answer("Geometric"),
+  allow_retry = T,
+  random_answer_order = TRUE
+)
+```
+
+<div id="baggage1-hint">
+**Hint:** What distribution should you be using with a rate?
+</div>
+
+What is the probability that the airline will lose at least one bag on a randomly chosen day?
+
+```{r baggage2, exercise = TRUE}
+
+```
+
+```{r baggage2-solution, message = FALSE, warning = FALSE}
+1-ppois(0, lambda = 2.2)
+```
+
+```{r baggage2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1-ppois(0, lambda = 2.2)))
+})
+```
+
+<div id="baggage2-hint">
+**Hint:** This question is asking for a "more than" probability, so you should be using the Complement Rule!
+</div>
+
+What is the probability that the airline will lose exactly four bags on a randomly chosen day?
+
+```{r baggage3, exercise = TRUE}
+
+```
+
+```{r baggage3-solution, message = FALSE, warning = FALSE}
+dpois(4, lambda = 2.2)
+```
+
+```{r baggage3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dpois(4, lambda = 2.2)))
+})
+```
+
+<div id="baggage3-hint">
+**Hint:** What command should you be using to find the probability of an individual value?
+</div>
+
+What is the probability that the airline will lose two to five bags on a randomly chosen day?
+
+```{r baggage4, exercise = TRUE}
+
+```
+
+```{r baggage4-solution, message = FALSE, warning = FALSE}
+ppois(5, lambda = 2.2) - ppois(1, lambda = 2.2)
+```
+
+```{r baggage4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, ppois(5, lambda = 2.2) - ppois(1, lambda = 2.2)))
+})
+```
+
+<div id="baggage4-hint">
+**Hint:** To find the probability of a range, you need to subtract two values!
+</div>
+
+Now assume that the airline takes a random sample of 36 days' worth of data. What are the expected value and standard error of the distribution of the average number of bags lost in this sample? Save them as `exp_bags` and `se_bags`and print the values out so you can see them.
+
+```{r baggage5, exercise = TRUE}
+
+```
+
+```{r baggage5-solution, message = FALSE, warning = FALSE}
+exp_bags <- 2.2
+exp_bags
+se_bags <- sqrt(2.2)/sqrt(36)
+se_bags
+```
+
+```{r baggage5-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="baggage5-hint">
+**Hint:** This problem is about the standard error of an *average*, so you should be thinking about sampling distributions and the Central Limit Theorem!
+</div>
+
+Now, what is the probability that the average bag loss is at least one?
+
+```{r prepare-baggage1, message = FALSE}
+exp_bags <- 2.2
+se_bags <- sqrt(2.2)/sqrt(36)
+```
+
+```{r baggage6, exercise = TRUE, exercise.setup = "prepare-baggage1"}
+
+```
+
+```{r baggage6-solution, message = FALSE, warning = FALSE}
+1-pnorm(1, mean = exp_bags, sd = se_bags)
+```
+
+```{r baggage6-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1-pnorm(1, mean = exp_bags, sd = se_bags)))
+})
+```
+
+<div id="baggage6-hint">
+**Hint:** This problem is about the standard error of an *average*, so you should be thinking about sampling distributions and the Central Limit Theorem!
+</div>
+
+What is the probability that the average bag loss is exactly four?
+
+```{r baggage7, exercise = TRUE}
+
+```
+
+```{r baggage7-solution, message = FALSE, warning = FALSE}
+0
+```
+
+```{r baggage7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="baggage7-hint">
+**Hint:** Can you find the probability of an exact value in a continuous distribution?
+</div>
+
+
+What is the probability that the average bag loss is between two and five?
+
+```{r baggage8, exercise = TRUE, exercise.setup = "prepare-baggage1"}
+
+```
+
+```{r baggage8-solution, message = FALSE, warning = FALSE}
+pnorm(5, mean = exp_bags, sd = se_bags) - pnorm(2, mean = exp_bags, sd = se_bags)
+```
+
+```{r baggage8-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(5, mean = exp_bags, sd = se_bags) - pnorm(2, mean = exp_bags, sd = se_bags)))
+})
+```
+
+<div id="baggage8-hint">
+**Hint:** This problem is about the standard error of an *average*, so you should be thinking about sampling distributions and the Central Limit Theorem!
+</div>
+
+This exercise was inspired by OIS exercise 4.34.
+
+### Heights of 10 Year Olds
+
+Heights of 10 year olds, regardless of gender, closely follow a normal distribution with mean 55 inches and standard deviation 6 inches. 
+
+What is the probability that a randomly chosen 10 year old is shorter than 48 inches? 
+
+```{r heights1, exercise = TRUE}
+
+```
+
+```{r heights1-solution, message = FALSE, warning = FALSE}
+pnorm(48, mean = 55, sd = 6)
+```
+
+```{r heights1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(48, mean = 55, sd = 6)))
+})
+```
+
+<div id="heights1-hint">
+**Hint:** This question is asking for a "less than" probability, so you can use the appropriate command directly (no need to apply the Complement Rule). 
+</div>
+
+What is the probability that a randomly chosen 10 year old is between 60 and 65 inches? 
+
+```{r heights2, exercise = TRUE}
+
+```
+
+```{r heights2-solution, message = FALSE, warning = FALSE}
+pnorm(65, mean = 55, sd = 6) - pnorm(60, mean = 55, sd = 6)
+```
+
+```{r heights2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(65, mean = 55, sd = 6) - pnorm(60, mean = 55, sd = 6)))
+})
+```
+
+<div id="heights2-hint">
+**Hint:** To find the probability of a range, you need to subtract two values!
+</div>
+
+
+If the tallest 10\% of the 10 year olds are considered "very tall", what is the height cutoff for "very tall"
+
+```{r heights3, exercise = TRUE}
+
+```
+
+```{r heights3-solution, message = FALSE, warning = FALSE}
+qnorm(0.9, mean = 55, sd = 6)
+```
+
+```{r heights3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, qnorm(0.9, mean = 55, sd = 6)))
+})
+```
+
+<div id="heights3-hint">
+**Hint:** You are not looking for a probability in this problem, you are looking for a value that splits the distribution into two pieces. 
+</div>
+
+The height requirement for *Batman the Ride* at Six Flags Magic Mountain is 54 inches. What percent of 10 year olds cannot go on this ride? Save this value as `p_Batman` and print the value out so you can see it. 
+
+```{r heights4, exercise = TRUE}
+
+```
+
+```{r heights4-solution, message = FALSE, warning = FALSE}
+p_Batman <- pnorm(54, mean = 55, sd = 6)
+p_Batman
+```
+
+```{r heights4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="heights4-hint">
+**Hint:** This question is asking for a "less than" probability, so you can use the appropriate command directly (no need to apply the Complement Rule). 
+</div>
+
+Suppose there are four 10 year olds. What is the chance at least two of them will be able to ride *Batman the Ride*? 
+
+```{r prepare-heights1, message = FALSE}
+p_Batman <- pnorm(54, mean = 55, sd = 6)
+```
+
+```{r heights5, exercise = TRUE, exercise.setup = "prepare-heights1"}
+
+```
+
+```{r heights5-solution, message = FALSE, warning = FALSE}
+1-pbinom(1, prob = p_Batman, size = 4)
+```
+
+```{r heights5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1-pbinom(1, prob = p_Batman, size = 4)))
+})
+```
+
+<div id="heights5-hint">
+**Hint:** What distribution should you be using with a probability of success and known sample size of 4?
+</div>
+
+Suppose you work at the park to help them better understand their customer's demographics, and you are counting people as they enter the park. What is the chance that the first 10 year old you see who can ride *Batman the Ride* is the third 10 year old who enters the park?
+
+```{r heights6, exercise = TRUE, exercise.setup = "prepare-heights1"}
+
+```
+
+```{r heights6-solution, message = FALSE, warning = FALSE}
+dgeom(2, prob = p_Batman)
+```
+
+```{r heights6-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dgeom(2, prob = p_Batman)))
+})
+```
+
+<div id="heights6-hint">
+**Hint:** What distribution should you be using with a probability of success and unknown sample size?
+</div>
+
+What fraction of 10 year olds are at least 72 inches? Save this probability as `p_72` and print the value out so you can see it. 
+
+```{r heights7, exercise = TRUE}
+
+```
+
+```{r heights7-solution, message = FALSE, warning = FALSE}
+p_72 <- 1 - pnorm(72, mean = 55, sd = 6)
+p_72
+```
+
+```{r heights7-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="heights7-hint">
+**Hint:** This question is asking for an "at least" probability, so you should be using the Complement Rule!
+</div>
+
+If there are 2,000 10 year olds entering Six Flags Magic Mountain in a single day, then compute the expected number of 10 year olds who are at least 72 inches tall. 
+
+```{r prepare-heights2, message = FALSE}
+p_72 <- 1 - pnorm(72, mean = 55, sd = 6)
+```
+
+```{r heights8, exercise = TRUE, exercise.setup = "prepare-heights2"}
+
+```
+
+```{r heights8-solution, message = FALSE, warning = FALSE}
+p_72*2000
+```
+
+```{r heights8-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, p_72*2000))
+})
+```
+
+<div id="heights8-hint">
+**Hint:** What distribution should you be using with a probability of success and known sample size of 2,000?
+</div>
+
+Using the Binomial distribution, compute the probability that 0 of the 2,000 10 year olds will be at least 72 inches tall. 
+
+```{r heights9, exercise = TRUE, exercise.setup = "prepare-heights2"}
+
+```
+
+```{r heights9-solution, message = FALSE, warning = FALSE}
+dbinom(0, prob = p_72, size = 2000)
+```
+
+```{r heights9-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dbinom(0, prob = p_72, size = 2000)))
+})
+```
+
+<div id="heights9-hint">
+**Hint:** What command should you be using to find the probability of an individual value?
+</div>
+
+This exercise was inspired by OIS exercises 4.44, 4.46, and 4.48.
+
+### Ice Cream 
+
+Ice cream usually comes in 1.5 quart boxes (48 fluid ounces), and ice cream scoops hold about 2 ounces. However, there is some variability in the amount of ice cream in a box as well as the amount of ice cream scooped out. We represent the amount of ice cream in the box as $X$, and the amount scooped out as $Y$. Suppose that $E(X) = 48$ and $Var(X) = 1$, while $E(Y) = 2$ and $Var(Y) = 0.0625$. 
+
+An entire box of ice cream, plus 3 scoops from a second box, is served at a party. How much ice cream do you expect to have been served at this party?
+
+```{r icecream1, exercise = TRUE}
+
+```
+
+```{r icecream1-solution, message = FALSE, warning = FALSE}
+48 + 3*2
+```
+
+```{r icecream1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 48 + 3*2))
+})
+```
+
+<div id="icecream1-hint">
+**Hint:** Find a linear combination that includes these two variables. 
+</div>
+
+What is the standard deviation  of the amount of ice cream served?
+
+```{r icecream2, exercise = TRUE}
+
+```
+
+```{r icecream2-solution, message = FALSE, warning = FALSE}
+sqrt(1^2*1 + 3^2*0.0625)
+```
+
+```{r icecream2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, sqrt(1^2*1 + 3^2*0.0625)))
+})
+```
+
+<div id="icecream2-hint">
+**Hint:** Find a linear combination that includes these two variables. 
+</div>
+
+How much ice cream would you expect to be left in the box after scooping out one scoop of ice cream? 
+
+```{r icecream3, exercise = TRUE}
+
+```
+
+```{r icecream3-solution, message = FALSE, warning = FALSE}
+48-2
+```
+
+```{r icecream3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 48-2))
+})
+```
+
+<div id="icecream3-hint">
+**Hint:** Find a new linear combination that includes these two variables. 
+</div>
+
+What is the standard deviation of the amount left in the box?
+
+```{r icecream4, exercise = TRUE}
+
+```
+
+```{r icecream4-solution, message = FALSE, warning = FALSE}
+sqrt(1^2*1+1^2*0.0625)
+```
+
+```{r icecream4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, sqrt(1^2*1+1^2*0.0625)))
+})
+```
+
+<div id="icecream4-hint">
+**Hint:** Find a new linear combination that includes these two variables. 
+</div>
+
+This exercise was inspired by OIS exercise 3.44.
+
+### Bird Nests
+
+Use the `BirdNest` dataset to answer the following questions. 
+
+Give the five-number summary for `No.eggs`.
+
+```{r prepare-birdsnest1, message = FALSE}
+BirdNest <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/Stat2Data/BirdNest.csv",
+                     stringsAsFactors = TRUE)
+
+BirdNest$Color <- as.factor(BirdNest$Color)
+BirdNest$Closed. <- as.factor(BirdNest$Closed.)
+```
+
+```{r birdsnest1, exercise = TRUE, exercise.setup = "prepare-birdsnest1"}
+
+```
+
+```{r birdsnest1-solution, message = FALSE, warning = FALSE}
+BirdNest %>%
+  summarize(Min = min(No.eggs), Q1 = quantile(No.eggs, probs = 0.25), Median = median(No.eggs), Q3 = quantile(No.eggs, probs = 0.75), Max = max(No.eggs))
+```
+
+```{r birdsnest1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="birdsnest1-hint">
+**Hint:** The five number summary is the minimum, first quartile, median, third quartile, and maximum.
+</div>
+
+Using `ggplot()`, create a histogram showing the distribution of `Length`, in centimeters, using 12 bins. Comment on the distribution.
+
+```{r birdsnest2, exercise = TRUE, exercise.setup = "prepare-birdsnest1"}
+
+```
+
+```{r birdsnest2-solution, message = FALSE, warning = FALSE}
+ggplot(data = BirdNest, aes(x = Length)) + 
+  geom_histogram(bins = 12)
+```
+
+```{r birdsnest2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="birdsnest2-hint">
+**Hint:** The geom for a histogram is `geom_histogram()`. 
+</div>
+
+Using `ggplot()`, create a plot comparing the mean length of time in days the species incubates eggs in the nest (in days) and the mean length of time in days the species cares for babies in the nest (in days). Comment on the relationship between these two variables.
+
+```{r birdsnest3, exercise = TRUE, exercise.setup = "prepare-birdsnest1"}
+
+```
+
+```{r birdsnest3-solution, message = FALSE, warning = FALSE}
+ggplot(data = BirdNest, aes(x = Incubate, y = Nestling)) + 
+  geom_point()
+```
+
+```{r birdsnest3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="birdnest3-hint">
+**Hint:** The geom for a scatterplot is `geom_point()`. 
+</div>
+
+Change the point color according to the indicator of whether the nest is closed (pendant, spherical, cavity, crevice, burrow) or open (saucer, cup).
+
+```{r birdsnest4, exercise = TRUE, exercise.setup = "prepare-birdsnest1"}
+
+```
+
+```{r birdsnest4-solution, message = FALSE, warning = FALSE}
+ggplot(data = BirdNest, aes(x = Incubate, y = Nestling, color = Closed.)) + 
+  geom_point()
+```
+
+```{r birdsnest4-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="birdnest4-hint">
+**Hint:** Changes about the way a graph looks can be made in the aesthetics statement. 
+</div>
+
+### Books on a Bookshelf
+
+The table below shows the distribution of books on a bookshelf, based on whether they are nonfiction or fiction and hardcover or paperback. 
+
+```{r, echo = FALSE}
+row1 <- c(13, 59, 72)
+row2 <- c(15, 8, 23)
+
+booktable <- rbind(row1, row2)
+booktable <- rbind(booktable, colSums(booktable))
+
+colnames(booktable) <- c("Hardcover", "Paperback", "Total")
+rownames(booktable) <- c("Fiction", "Nonfiction", "Total")
+
+kable(booktable, align = c("r", "r", "r"), booktabs = T, escape = T, format = "html") %>%
+  kable_styling(bootstrap_options = "striped")
+
+```
+
+What is the probability that a randomly chosen book is fiction?
+
+```{r books1, exercise = TRUE}
+
+```
+
+```{r books1-solution, message = FALSE, warning = FALSE}
+72/95
+```
+
+```{r books1-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 72/95))
+})
+```
+
+<div id="books1-hint">
+**Hint:** How many fiction books are there? How many books are there total?
+</div>
+
+What is the probability that a randomly chosen book is paperback?
+
+```{r books2, exercise = TRUE}
+
+```
+
+```{r books2-solution, message = FALSE, warning = FALSE}
+67/95
+```
+
+```{r books2-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 67/95))
+})
+```
+
+<div id="books2-hint">
+**Hint:** How many paperback books are there? How many books are there total?
+</div>
+
+What is the probability that a randomly chosen book is hardcover and nonfiction?
+
+```{r books3, exercise = TRUE}
+
+```
+
+```{r books3-solution, message = FALSE, warning = FALSE}
+15/95
+```
+
+```{r books3-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 15/95))
+})
+```
+
+<div id="books3-hint">
+**Hint:** How many books are there that are both hardcover and nonfiction? How many books are there total?
+</div>
+
+What is the probability that a book is paperback, given that it is nonfiction?
+
+```{r books4, exercise = TRUE}
+
+```
+
+```{r books4-solution, message = FALSE, warning = FALSE}
+8/23
+```
+
+```{r books4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 8/23))
+})
+```
+
+<div id="books4-hint">
+**Hint:** How many nonfiction books are there? Of those, how many are paperback?
+</div>
+
+What is the probability that a book is fiction, given that it is hardcover?
+
+```{r books5, exercise = TRUE}
+
+```
+
+```{r books5-solution, message = FALSE, warning = FALSE}
+13/28
+```
+
+```{r books5-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 13/28))
+})
+```
+
+<div id="books5-hint">
+**Hint:** How many hardcover books are there? Of those, how many are fiction?
+</div>
+
+Are being hardcover and nonfiction independent? How can you tell?
+
+```{r books6, exercise = TRUE}
+
+```
+
+```{r books6-solution, message = FALSE, warning = FALSE}
+(28/95)*(23/95)
+```
+
+```{r books6-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, (28/95)*(23/95)))
+})
+```
+
+<div id="books6-hint">
+**Hint:** You know $P(Hardcover \text{ and } Fiction)$--what is $P(Hardcover) \times P(Fiction)$?
+</div>
+
+This exercise was inspired by OIS exercise 3.26.
+
+### Speeding on the I-5
+
+The distribution of passenger vehicle speeds traveling on the Interstate 5 Freeway (I-5) in California is nearly normal with a mean of 72.6 miles/hour and a standard deviation of 4.78 miles/hour. 
+
+What percent of passenger vehicles travel slower than 80 miles/hour?
+
+```{r i51, exercise = TRUE}
+
+```
+
+```{r i51-solution, message = FALSE, warning = FALSE}
+pnorm(80, mean = 72.6, sd = 4.78)
+```
+
+```{r i51-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(80, mean = 72.6, sd = 4.78)))
+})
+```
+
+<div id="i51-hint">
+**Hint:** This question is asking for a "less than" probability, so you can use the appropriate command directly (no need to apply the Complement Rule). 
+</div>
+
+What percent of passenger vehicles travel between 60 and 80 miles/hour? 
+
+```{r i52, exercise = TRUE}
+
+```
+
+```{r i52-solution, message = FALSE, warning = FALSE}
+pnorm(80, mean = 72.6, sd = 4.78) - pnorm(60, mean = 72.6, sd = 4.78)
+```
+
+```{r i52-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, pnorm(80, mean = 72.6, sd = 4.78) - pnorm(60, mean = 72.6, sd = 4.78)))
+})
+```
+
+<div id="i52-hint">
+**Hint:** To find the probability of a range, you need to subtract two values!
+</div>
+
+How fast do the fastest 5% of passenger vehicles travel?
+
+```{r i53, exercise = TRUE}
+
+```
+
+```{r i53-solution, message = FALSE, warning = FALSE}
+qnorm(0.95, mean = 72.6, sd = 4.78)
+```
+
+```{r i53-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, qnorm(0.95, mean = 72.6, sd = 4.78)))
+})
+```
+
+<div id="i53-hint">
+**Hint:** You are not looking for a probability in this problem, you are looking for a value that splits the distribution into two pieces. 
+</div>
+
+The speed limit on this stretch of the I-5 is 70 miles/hour. Approximate what percentage of the passenger vehicles travel above the speed limit on this stretch of the I-5. Save this value as `p_speeding` and print the value out so you can see it. 
+
+```{r i54, exercise = TRUE}
+
+```
+
+```{r i54-solution, message = FALSE, warning = FALSE}
+p_speeding <- 1 - pnorm(70, mean = 72.6, sd = 4.78)
+p_speeding
+```
+
+```{r i54-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="i54-hint">
+**Hint:** This question is asking for a "more than" probability, so you should be using the Complement Rule!
+</div>
+
+A highway patrol officer is hidden on the side of the freeway. What is the probability that 5 cars pass and none are speeding? Assume that the speeds of the cars are independent of each other. 
+
+```{r prepare-i51, message = FALSE}
+p_speeding <- 1 - pnorm(70, mean = 72.6, sd = 4.78)
+```
+
+```{r i55, exercise = TRUE, exercise.setup = "prepare-i51"}
+
+```
+
+```{r i55-solution, message = FALSE, warning = FALSE}
+dbinom(0, prob = p_speeding, size = 5)
+```
+
+```{r i55-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, dbinom(0, prob = p_speeding, size = 5)))
+})
+```
+
+<div id="i55-hint">
+**Hint:** What distribution should you be using with a probability of success and known sample size of 5?
+</div>
+
+On average, how many cars would the highway patrol officer expect to watch until the first car that is speeding? 
+
+```{r i56, exercise = TRUE, exercise.setup = "prepare-i51"}
+
+```
+
+```{r i56-solution, message = FALSE, warning = FALSE}
+1/p_speeding
+```
+
+```{r i56-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, 1/p_speeding))
+})
+```
+
+<div id="i56-hint">
+**Hint:** What distribution should you be using with a probability of success and unknown sample size?
+</div>
+
+What is the standard deviation of the number of cars he would expect to watch?
+
+```{r i57, exercise = TRUE, exercise.setup = "prepare-i51"}
+
+```
+
+```{r i57-solution, message = FALSE, warning = FALSE}
+sqrt((1 - p_speeding)/p_speeding^2)
+```
+
+```{r i57-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, sqrt((1 - p_speeding)/p_speeding^2)))
+})
+```
+
+<div id="i57-hint">
+**Hint:** What distribution should you be using with a probability of success and unknown sample size? 
+</div>
+
+This exercise was inspired by OIS exercises 4.36 and 4.38.
+
+### News on Twitter
+
+A poll conducted in 2013 found that 52% of U.S. adult Twitter users get at least some news on Twitter. The standard error for this estimate was 2.4%, and a normal distribution may be used to model the sample proportion. 
+
+Begin constructing a 99% confidence interval for the fraction of U.S. adult twitter users who get some news on Twitter by finding the $z^*$ necessary for the interval. Save it as `zstar_99`. 
+
+```{r news1, exercise = TRUE}
+
+```
+
+```{r news1-solution, message = FALSE, warning = FALSE}
+zstar_99 <- qnorm(0.995, mean = 0, sd = 1)
+```
+
+```{r news1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="news1-hint">
+**Hint:** You are not looking for a probability in this problem, you are looking for a value that splits the distribution into two pieces. 
+</div>
+
+Now, using `zstar_99` and the standard error, calculate the margin of error. Save it as `MoE_news`.
+
+```{r prepare-news1, message = FALSE}
+zstar_99 <- qnorm(0.995, mean = 0, sd = 1)
+```
+
+```{r news2, exercise = TRUE, exercise.setup = "prepare-news1"}
+
+```
+
+```{r news2-solution, message = FALSE, warning = FALSE}
+MoE_news <- zstar_99*0.024
+```
+
+```{r news2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="news2-hint">
+**Hint:** The margin of error is based on $z^*$ and the standard error. 
+</div>
+
+Finally, find the lower and upper bound of the confidence interval. Make sure you and your group are able to  interpret the confidence interval in context!
+
+```{r prepare-news2, message = FALSE}
+zstar_99 <- qnorm(0.995, mean = 0, sd = 1)
+MoE_news <- zstar_99*0.024
+```
+
+```{r news3, exercise = TRUE, exercise.setup = "prepare-news2"}
+
+```
+
+```{r news3-solution, message = FALSE, warning = FALSE}
+0.52-MoE_news
+0.52+MoE_news
+```
+
+```{r news3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="news3-hint">
+**Hint:** To find the confidence interval, you have to subtract and add the margin of error. 
+</div>
+
+This exercise was inspired by OIS exercise 5.8.
+
+### Website Registration
+
+A website is trying to increase registration for first-time visitors, exposing 1% of these visitors to a new site design. Of 752 randomly sampled visitors over a month who saw the new resign, 64 registered. 
+
+What is the sample proportion of visitors who registered? Save the value as `phat_register` and print the value out so you can see it. 
+
+```{r website1, exercise = TRUE}
+
+```
+
+```{r website1-solution, message = FALSE, warning = FALSE}
+phat_register <- 64/752
+phat_register
+```
+
+```{r website1-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="website1-hint">
+**Hint:** How many new registrations are there? How many visitors are there total?
+</div>
+
+Check the conditions to see if we are able to build a confidence interval with this data. 
+
+```{r prepare-website1, message = FALSE}
+phat_register <- 64/752
+```
+
+```{r website2, exercise = TRUE, exercise.setup = "prepare-website1"}
+
+```
+
+```{r website2-solution, message = FALSE, warning = FALSE}
+phat_register*752
+(1-phat_register)*752
+```
+
+```{r website2-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="website2-hint">
+**Hint:** $n\hat{p}$ and $n(1-\hat{p})$ must be greater than or equal to 10. 
+</div>
+
+Using `prop.test()`, find a 95% confidence interval for the proportion of visitors who register for the website. Make sure you and your group are able to interpret the confidence interval in context!
+
+```{r website3, exercise = TRUE}
+
+```
+
+```{r website3-solution, message = FALSE, warning = FALSE}
+prop.test(x = 64, n = 752, conf.level = 0.95)$conf.int
+```
+
+```{r website3-check, message = FALSE, warning = FALSE}
+grade_code()
+```
+
+<div id="website3-hint">
+**Hint:** Use `?prop.test()` if you forget the arguments. 
+</div>
+
+If every confidence interval is two margins of error long, what is the margin of error for this confidence interval?
+
+```{r website4, exercise = TRUE}
+
+```
+
+```{r website4-solution, message = FALSE, warning = FALSE}
+(0.10795048 - 0.06661902)/2
+```
+
+```{r website4-check, message = FALSE, warning = FALSE}
+grade_result({
+  pass_if(~ all.equal(.result, (0.10795048 - 0.06661902)/2))
+})
+```
+
+<div id="website4-hint">
+**Hint:** Find the length of the interval, and divide by 2!
+</div>
+
+This exercise was inspired by OIS exercise 5.13.
+
+
+
