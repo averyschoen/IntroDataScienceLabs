@@ -1,0 +1,13 @@
+Useful Links
+
+https://support.posit.co/hc/en-us/articles/360023654474-installing-and-Configuring-Python-with-RStudio
+
+https://pkgs.rstudio.com/gradethis/reference/gradethis_exercise_checker.html
+
+https://rdrr.io/github/rstudio-education/gradethis/man/grade_this_code.html
+
+https://pkgs.rstudio.com/learnr/articles/exercises.html#hints-and-solutions
+
+https://pkgs.rstudio.com/learnr/articles/questions.html
+
+https://pkgs.rstudio.com/learnr/articles/formats.html
