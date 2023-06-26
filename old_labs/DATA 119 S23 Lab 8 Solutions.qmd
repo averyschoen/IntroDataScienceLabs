@@ -1,0 +1,302 @@
+---
+format: pdf
+margin-left: 2.5cm
+margin-right: 2.5cm
+margin-top: 2cm
+margin-bottom: 4.5cm
+header-includes:
+  - \usepackage{enumitem,fancyhdr}
+  - \usepackage[font=small,labelfont=bf,tableposition=top]{caption}
+  - \DeclareCaptionLabelFormat{andtable}{#1~#2  \&  \tablename~\thetable}
+  - \setlength{\parindent}{0.0in}
+  - \setlength{\parskip}{0.05in}
+  - \pagestyle{fancyplain}
+  - \headheight 35pt
+  - \lhead{Friday, May 12, 2023}
+  - \chead{\textbf{\Large Lab 9}}
+  - \rhead{DATA 119 \\ Spring 2023}
+  - \lfoot{}
+  - \cfoot{}
+  - \rfoot{\small\thepage}
+  - \headsep 1.5em
+urlcolor: blue
+---
+
+<!-- \thispagestyle{fancy} -->
+
+```{r, setup, include=FALSE}
+library(kableExtra)
+library(latex2exp)
+library(reticulate)
+
+knitr::opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",   # slightly smaller font for code
+  warning = FALSE, message = FALSE, 
+  fig.align = 'center', fig.height = 2.5) 
+ 
+set.seed(108)
+```
+
+
+\section*{Problem One: Goodreads Data}
+
+For this lab, you will use a dataset that I have been creating on [goodreads.com](goodreads.com). Goodreads allows you to keep track of and rate books that you have or would like to read. It also collects and aggregates user data. You should have two tables--one with my personal data in the goodreads_library_export_050823.sql file, and another called locations.sql. 
+
+\begin{enumerate}[label=\alph*.]
+  \item Download the two .sql files. Using the online interpreter \href{https://sqliteonline.com/}{https://sqliteonline.com/}, upload them both and rename them to \texttt{nussbaum\_goodreads} and \texttt{locations}.
+  \item Write a query that will allow you to view all of the columns in \texttt{nussbaum\_goodreads}. How many rows are there? How many variables are there? Read through the columns to try and get a sense of what each variable means.
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT *
+FROM nussbaum_goodreads 
+```
+
+\textcolor{blue}{The \texttt{nussbaum\_goodreads} table includes the following variables:}
+
+* \textcolor{blue}{\texttt{book\_id}: The ID number that Goodreads uses to identify a book in their database.}
+* \textcolor{blue}{\texttt{title}: The title of the book.}
+* \textcolor{blue}{\texttt{author}: The author of the book. }
+* \textcolor{blue}{\texttt{author\_lf}: The author of the book, with their last name first.}
+* \textcolor{blue}{\texttt{additional\_author}: Additional authors. I think that translators for books written in non-English languages may appear here. }
+* \textcolor{blue}{\texttt{isbn}: the International Standard Book Number, the standard for uniquely identifying books. }
+* \textcolor{blue}{\texttt{isbn13}: the International Standard Book Number, 13 digit version.}
+* \textcolor{blue}{\texttt{my\_rating}: the rating I gave the book after reading it (1-5 stars).}
+* \textcolor{blue}{\texttt{average\_rating}: the average rating given to the book by Goodreads users.}
+* \textcolor{blue}{\texttt{publisher}: the publisher of the book.}
+* \textcolor{blue}{\texttt{binding}: the ``format" of the book (e.g., hardcover, paperback, ebook, etc.)}
+* \textcolor{blue}{\texttt{number\_of\_pages}: number of pages in the book.}
+* \textcolor{blue}{\texttt{year\_published}: the publication year of the edition that I read.}
+* \textcolor{blue}{\texttt{original\_year\_published}: the first time the book was published.}
+* \textcolor{blue}{\texttt{date\_read}: the date I read the book. Some of the books I have entered well after reading them, but I have been entering books as I finish them (on specific dates) since roughly 2017.}
+* \textcolor{blue}{\texttt{date\_added}: the date that I added a book to ``my shelves" (account). }
+* \textcolor{blue}{\texttt{bookshelves}: a collection of descriptive tags. There are user-specified tags, like \texttt{"botm"} (representing books from my Book of the Month club), and Goodreads tags, like \texttt{"to-read"} (books that I want to read) and \texttt{"currently-reading"} (the books that I am reading right now), and \texttt{"read"} (the books that I have finished reading).}
+* \textcolor{blue}{\texttt{bookshelves\_with\_positions}: the same information as above, but with a number representing the order in which I have arranged the book on my shelf (usually the order in which I entered them).}
+* \textcolor{blue}{\texttt{exclusive\_shelf}: You can mark certain shelves as exclusive--for example, a book cannot be on the ``Want to Read" shelf and the ``Currently Reading Shelf" at the same time.}
+* \textcolor{blue}{\texttt{my\_review}: A written text review that I have added about the book.}
+* \textcolor{blue}{\texttt{spoilers}: You can tag text as spoilers-I never use this feature so I suspect the column is completely empty. }
+* \textcolor{blue}{\texttt{private\_notes}: I don't use this feature either, but I suspect you can enter notes for only you to view.}
+* \textcolor{blue}{\texttt{read\_count}: The number of times I have read the book.}
+* \textcolor{blue}{\texttt{owned\_copies}: An indicator variable for whether or not I own the book (highly suspect this information is not up to date).}
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{2}
+  \item What kind of binding do I read most frequently, according to this database?
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT binding, COUNT(binding) 
+FROM nussbaum_goodreads
+GROUP BY binding;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{3}
+  \item[] \textcolor{blue}{According to this query, I read hardcover books most frequently.}
+  \item What book did I add to the database most recently?
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT title, date_added
+FROM nussbaum_goodreads
+ORDER BY date_added DESC;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{4}
+  \item[] \textcolor{blue}{Troy, an audiobook written and performed by Stephen Fry. }
+  \item Is there a publisher that I seem to enjoy more than others, based on my ratings? For ease of answering, sort the output by some reasonable value.
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT publisher, AVG(my_rating)
+FROM nussbaum_goodreads
+GROUP BY publisher
+ORDER BY AVG(my_rating) DESC;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{5}
+  \item[] \textcolor{blue}{There are a lot of studios that I have given perfect ratings too, which seems suspicious.}
+  \item The results of the previous query should seem suspicious to you. Suppose you want to answer the same question--what publisher do I enjoy the most--but considering only publishers that I have read from at least five times.
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT publisher, COUNT(publisher), AVG(my_rating)
+FROM nussbaum_goodreads
+GROUP BY publisher
+ORDER BY AVG(my_rating) DESC, COUNT(publisher) DESC
+HAVING COUNT(publisher) >= 5;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{6}
+  \item[] \textcolor{blue}{Of the publishers from whom I have read at least five books, Hachette Audio has the highest rating.}
+  \item A friend of mine has a personal rule--he will not read books that are rated as less than a 3.8 on Goodreads. What are some books that I have read that I could recommend to him? What is the most popular book that I have read that I could recommend to him?
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT title, average_rating, exclusive_shelf
+FROM nussbaum_goodreads
+WHERE average_rating > 3.8 AND exclusive_shelf = "read"
+ORDER BY average_rating DESC;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{7}
+  \item[] \textcolor{blue}{In general, it seems that the most liked books on Goodreads are popular fantasy series (i.e., Harry Potter, Lord of the Rings, Game of Thrones, etc.). If I'm not recommending any of those, I might also recommend The Nightingale, Project Hail Mary, or Tunnel 29 (all of which I did enjoy very much). }
+  \item What are the longest and shortest books I have read?
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT title, MAX(number_of_pages), exclusive_shelf
+FROM nussbaum_goodreads
+WHERE exclusive_shelf = "read";
+
+SELECT title, MIN(number_of_pages), exclusive_shelf
+FROM nussbaum_goodreads
+WHERE exclusive_shelf = "read";
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{8}
+  \item[] \textcolor{blue}{The longest book I have read is A Storm of Swords, part of the Game of Thrones series. It has 1,179 pages. The shortest book I have read is The Particular Sadness of Lemon Cake, which hs 0 pages.}
+  \item Why might the short book from the previous question have 0 pages? Are there more books that have 0 pages?
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT *
+FROM nussbaum_goodreads
+WHERE title = "The Particular Sadness of Lemon Cake";
+
+SELECT title
+FROM nussbaum_goodreads
+WHERE number_of_pages = 0;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{9}
+  \item[] \textcolor{blue}{This book was an audiobook, which makes the zero pages make sense. There are no other books with zero pages.}
+  \item What is the average page length of an audiobook? Make sure to consider all possible bindings. 
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT AVG(number_of_pages)
+FROM nussbaum_goodreads
+WHERE binding in ("Audible Audio", "Audio CD", "Audiobook");
+```
+
+```{r, echo = FALSE, eval = FALSE}
+locations2 <- read.csv("locations2.csv")
+
+library(dplyr)
+
+locations2 %>% pull(Title) %>% unique() %>% length()
+locations2 %>% pull(Title) %>% table() %>% table()
+
+locations2_merged <- locations2 %>%
+  group_by(Title) %>%
+  summarize(Locations2 = paste(Locations, collapse = ","))
+head(locations2_merged)
+
+write.csv(locations2_merged, "locations3.csv")
+
+books <- read.csv("goodreads_library_export_050823.csv")
+
+booksIneed <- left_join(books, locations2_merged, by = c("Title"))$Title
+
+set.seed(1003)
+
+locations2_merged$Need <- locations2_merged$Title %in% booksIneed
+part1 <- locations2_merged %>% filter(Need == 1)
+part2 <- locations2_merged %>% filter(Need == 0) %>% sample_n(5000)
+
+sampled_books <- bind_rows(part1, part2)
+
+locations2$Need <- locations2$Title %in% sampled_books$Title
+
+locations3 <- locations2 %>% filter(Need == 1) %>% select(Locations, Title)
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{10}
+  \item Write a query that will allow you to view all of the columns in \texttt{locations}. How many rows are there? How many variables are there? Read through the columns to try and get a sense of what each variable means.
+\end{enumerate}
+
+* \textcolor{blue}{\texttt{Locations}: A continent or country.}
+* \textcolor{blue}{\texttt{Title}: The title of the book.}
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{11}
+  \item How many of these books take place in each continent?
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT locations, COUNT(locations)
+FROM locations
+WHERE locations IN ("africa", "antarctica", "asia", "europe", "north-america", "oceania", "latin-america")
+GROUP BY locations;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{12}
+  \item[] \textcolor{blue}{Oddly, there is no South America on this list, so I've used Latin America instead--even though I'm not 100\% sure those are direct analogs. You may have something slightly different! }
+  \item How many books are on both lists? It may help to abbreviate the tables in your query.
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT COUNT(DISTINCT(A.title))
+FROM nussbaum_goodreads as A
+JOIN locations as B ON A.title = B.title;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{13}
+  \item How many books have I read that take place in Illinois? It may help to create a new table. 
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+CREATE TABLE both AS
+SELECT *
+FROM nussbaum_goodreads as a
+JOIN locations as b ON a.title = b.title;
+
+SELECT COUNT(title), locations, exclusive_shelf
+FROM both
+WHERE exclusive_shelf = "read" and locations = "us-illinois"
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{14}
+  \item What is one of the books I liked best that took place in England, and what is the book that I liked least that took place in England? 
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT title, my_rating, locations, exclusive_shelf
+FROM both
+WHERE exclusive_shelf = "read" and locations = "uk-england" AND my_rating = 5;
+
+SELECT title, my_rating, locations, exclusive_shelf
+FROM both
+WHERE exclusive_shelf = "read" and locations = "uk-england" AND my_rating = 2;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{15}
+  \item[] \textcolor{blue}{Lots of Jane Austen! The book that I liked the least was Mists of Avalon.}
+  \item What is the most highly rated book that takes place in each of Argentina, France, Germany, Japan, Italy, and Switzerland? 
+\end{enumerate}
+
+```{sql connection="con", eval = FALSE, echo = TRUE}
+SELECT title, MAX(average_rating), locations
+FROM both
+WHERE locations IN ("argentina", "france", "germany", "japan", "italy", "switzerland")
+GROUP BY locations;
+```
+
+\begin{enumerate}[label=\alph*.]
+  \setcounter{enumi}{16}
+  \item[] \textcolor{blue}{Things We Lost in the Fire (Argentina), The Nightingale (France), The Book Thief (Germany), The Hiding Place (Italy), Pachinko (Japan)--and no books in Switzerland.}
+  \item Write a query that you think answers an interesting question about this dataset. Post the question in the thread on Ed so that your classmates can get more practice!
+\end{enumerate}
