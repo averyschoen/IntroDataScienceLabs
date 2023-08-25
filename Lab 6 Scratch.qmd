@@ -1,0 +1,425 @@
+---
+format: pdf
+margin-left: 2.5cm
+margin-right: 2.5cm
+margin-top: 2cm
+margin-bottom: 4.5cm
+header-includes:
+  - \usepackage{enumitem,fancyhdr}
+  - \usepackage[font=small,labelfont=bf,tableposition=top]{caption}
+  - \DeclareCaptionLabelFormat{andtable}{#1~#2  \&  \tablename~\thetable}
+  - \setlength{\parindent}{0.0in}
+  - \setlength{\parskip}{0.05in}
+  - \pagestyle{fancyplain}
+  - \headheight 35pt
+  - \lhead{Friday, November 3, 2023}
+  - \chead{\textbf{\Large Lab 6}}
+  - \rhead{DATA 119 \\ Autumn 2023}
+  - \lfoot{}
+  - \cfoot{}
+  - \rfoot{\small\thepage}
+  - \headsep 1.5em
+urlcolor: blue
+---
+
+<!-- \thispagestyle{fancy} -->
+
+```{r, setup, include=FALSE}
+# Install additional packages if needed:
+# install.packages('kableExtra')
+
+# Load necessary packages
+require(mosaic)
+
+library(caret)
+library(cvAUC)
+library(ggrepel)
+library(glmnet)
+library(kableExtra)
+library(latex2exp)
+library(reshape2)
+library(reticulate)
+
+knitr::opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",   # slightly smaller font for code
+  warning = FALSE, message = FALSE, 
+  fig.align = 'center', fig.height = 2.5, cache = FALSE) 
+
+set.seed(108)
+
+use_condaenv("/Users/amynussbaum/Library/r-miniconda-arm64/envs/r-reticulate/bin/python")
+```
+
+The goals of this lab are:
+
+* Practice calculating different distance metrics. 
+* Define a $k$NN classifier on a small dataset by hand. 
+* Practice calculations on confusion matrices.
+* Implement $k$NN classification and regression. 
+* Create a graph illustrating the effects of choosing $k$ on training and test set accuracy. 
+
+For this lab, it may be helpful to install and load the following modules:
+ 
+* `numpy`
+* `pandas`
+* `plotnine`
+* `random`
+* `sklearn`
+
+```{python imports}
+import numpy as np
+import pandas as pd
+import plotnine as p9
+import random
+import sklearn
+```
+
+We will be using the birthweight dataset from Homeworks 3 and 4. Refresh yourself on the variables it includes by reading the [documentation](https://vincentarelbundock.github.io/Rdatasets/doc/MASS/birthwt.html).
+
+```{python readdata}
+birthwt = pd.read_csv("/Users/amynussbaum/Documents/U of C/Courses/119/2023 Autumn/Week 3/Homework/birthwt.csv")
+birthwt = pd.get_dummies(birthwt, columns = ['race'], drop_first = True, dtype = float)
+```
+
+<!-- 0. As a preliminary step, go ahead and create indicator variables for the categorical variables. Then, "scramble" the rows so that when we are doing cross validation, we're not accidentally fitting models on unrepresentative data. If you want EXACTLY the same results as I have, use `random.seed(137)` first. -->
+
+<!-- ```{python cleandata} -->
+<!-- random.seed(137) -->
+
+<!-- birthwt = pd.get_dummies(birthwt, columns = ['race']) -->
+<!-- birthwt = birthwt.sample(frac = 1) -->
+<!-- ``` -->
+
+\newpage
+
+\section*{Understanding $k$NN}
+
+Consider the following example: we have two classes, 1 (blue triangles) and 2 (red circles). Observations A-M are used as training data for a $k$NN classifier based on two predictors $X_1$ and $X_2$. Observations A-G belong to Class 1, and observations H-M belong to Class 2. All of the observations are shown in the plot below.
+
+```{r, echo = FALSE, fig.height = 3.25}
+Label <- c("H", "I", "A", 
+           "J", "L", "B", 
+           "K", "C", "D", 
+           "E", "M", "F", "G")
+Color <- c("Red", "Red", "Blue", 
+           "Red", "Red", "Blue", 
+           "Red", "Blue", "Blue", 
+           "Blue", "Red", "Blue", "Blue")
+Shape <- c(1, 1, 2, 
+           1, 1, 2, 
+           1, 2, 2, 
+           2, 1, 2, 2)
+X <- c(2.5, 2.5, 2.75,
+       3, 3.5, 3.25, 
+       3.5, 4.5, 5.0, 
+       5.5, 6.0, 6.5, 7)
+Y <- c(3, 1.5, 3.75,
+       3, 4.5, 3.75, 
+       1.5, 7, 6, 
+       7, 7.5, 8.5, 7.5)
+
+knn_plot <- data.frame(X = X, Y = Y)
+knn_plot$Label <- Label
+knn_plot$Color <- Color
+knn_plot$Shape <- Shape
+```
+
+```{r, echo = FALSE, fig.height = 5.5}
+ggplot(data = knn_plot, aes(x = X, y = Y, label = Label)) + 
+  geom_point(shape = Shape, color = Color, size = 7) + 
+  geom_text(hjust=0.5, vjust=0.5, color = Color) + 
+  scale_x_continuous(name = TeX(r"($X_1$)"), minor_breaks = seq(from = 1.5, to = 7.5, by = 0.25)) +
+  scale_y_continuous(name = TeX(r"($X_2$)"), limits = c(1.5, 9), minor_breaks = seq(from = 1.5, to = 9, by = 0.5)) +
+  ggtitle("Training Set")
+```
+
+## Distance Metrics
+
+1. If Point D is located at $(5, 6)$, and Point J is located at $(3, 3)$, what is the Manhattan distance between the two points?
+
+\begin{align*}
+\color{blue}{d_{Man}(D, J)} & \color{blue}{= \sum_{i = 1}^2|d_i - j_i|} \\
+& \color{blue}{= |d_1 - j_1| + |d_2 - j_2|} \\
+& \color{blue}{= |5 - 3| + |6 - 3| = 2 + 3 = 5} \\
+\end{align*}
+
+2. Point D is located at $(5, 6)$, and Point J is located at $(3, 3)$. Calculate the Euclidean distance between the two points.
+
+\begin{align*}
+\color{blue}{d_{Euc}(D, J)} & \color{blue}{= \sqrt{\sum_{i = 1}^2(d_i - j_i)^2}} \\
+& \color{blue}{= \sqrt{(d_1 - j_1)^2 + (d_2 - j_2)^2}} \\
+& \color{blue}{= \sqrt{(5 - 3)^2 + (6 - 3)^2} = \sqrt{4 + 9} = \sqrt{13}} \\
+\end{align*}
+
+## $k$NN Classifier by Hand
+
+3. What are the 3 nearest neighbors for point J? You may use Euclidean distance, but you do not have to actually calculate the values--use your best judgment based on what you see.
+
+\textcolor{blue}{The 3 nearest neighbors for point J are points H, A, and B.}
+
+4. Predict the class for point J, based on its three nearest neighbors.
+
+\textcolor{blue}{Point H is Class 1 (red circles), but points A and B are Class 2 (blue triangles). Since 2/3 points are Class 2, we would predict point J to also be Class 2.}
+
+5. Let Class 1 be the absence of some event, and Class 2 be the presence of some event. Is Point J a true positive, true negative, false positive, or false negative?
+
+\textcolor{blue}{If we are predicting point J to be Class 2, we are predicting the presence of some event. In reality, point J is Class 1, which means the event did not really happen. Thus, point J is a \textbf{false positive}.}
+
+6. Now, fill in the below table with the closest neighbors for each point. Again, you may use Euclidean distance, but you do not have to calculate the values--use your best judgment based on what you see.
+
+```{r, echo = FALSE}
+library(dplyr)
+library(kableExtra)
+
+point <- sort(Label)
+n1 <- c("H", "A", "D", rep("", 10))
+n2 <- c("J", "J", "E", rep("", 10))
+n3 <- c("B", "L", "M", rep("", 10))
+n4 <- rep("", 13)
+
+knn_table <- data.frame(point = point, "Neighbor 1" = n1, n2 = n2, n3 = n3, n4 = n4, n5 = n4)
+knn_table <- t(knn_table)
+row.names(knn_table) <- c("Point", "Neighbor 1", "Neighbor 2", "Neighbor 3", "Predicted", "Truth")
+
+kable(knn_table) %>%
+  column_spec (1, border_left = T) %>%
+  column_spec (14, border_right = T) %>%
+  kable_styling(position = "center", latex_options = "HOLD_position")
+```
+
+```{r, echo = FALSE}
+library(dplyr)
+library(kableExtra)
+
+point <- sort(Label)
+n1 <- c("$\\textcolor{red}{H}$", "$\\textcolor{blue}{A}$", "$\\textcolor{blue}{D}$",
+        "$\\textcolor{blue}{C}$", "$\\textcolor{blue}{D}$", "$\\textcolor{blue}{E}$",
+        "$\\textcolor{blue}{E}$", "$\\textcolor{blue}{A}$", "$\\textcolor{red}{H}$",
+        "$\\textcolor{red}{H}$", "$\\textcolor{red}{H}$", "$\\textcolor{blue}{A}$", 
+        "$\\textcolor{blue}{E}$")
+n2 <- c("$\\textcolor{red}{J}$", "$\\textcolor{red}{J}$", "$\\textcolor{blue}{E}$",
+        "$\\textcolor{blue}{E}$", "$\\textcolor{blue}{D}$", "$\\textcolor{blue}{G}$",
+        "$\\textcolor{blue}{F}$", "$\\textcolor{blue}{B}$", "$\\textcolor{red}{J}$",
+        "$\\textcolor{blue}{A}$", "$\\textcolor{red}{I}$", "$\\textcolor{blue}{B}$",
+        "$\\textcolor{blue}{F}$")
+n3 <- c("$\\textcolor{blue}{B}$", "$\\textcolor{red}{L}$", "$\\textcolor{red}{M}$",
+        "$\\textcolor{red}{M}$", "$\\textcolor{red}{M}$", "$\\textcolor{red}{M}$",
+        "$\\textcolor{red}{M}$", "$\\textcolor{red}{J}$", "$\\textcolor{red}{K}$", 
+        "$\\textcolor{blue}{B}$", "$\\textcolor{red}{J}$", "$\\textcolor{red}{J}$",
+        "$\\textcolor{blue}{G}$")
+preds <- c("$\\textcolor{red}{1}$", "$\\textcolor{red}{1}$", "$\\textcolor{blue}{2}$",
+           "$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$", 
+           "$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$", "$\\textcolor{red}{1}$", 
+           "$\\textcolor{blue}{2}$", "$\\textcolor{red}{1}$", "$\\textcolor{blue}{2}$", 
+           "$\\textcolor{blue}{2}$")
+truth <- c("$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$",
+           "$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$", "$\\textcolor{blue}{2}$", 
+           "$\\textcolor{blue}{2}$", "$\\textcolor{red}{1}$", "$\\textcolor{red}{1}$", 
+           "$\\textcolor{red}{1}$", "$\\textcolor{red}{1}$", "$\\textcolor{red}{1}$", 
+           "$\\textcolor{red}{1}$")
+
+knn_table <- data.frame(point = point, "Neighbor 1" = n1, n2 = n2, n3 = n3, preds = preds, truth = truth)
+knn_table <- t(knn_table)
+row.names(knn_table) <- c("Point", "Neighbor 1", "Neighbor 2", "Neighbor 3", "Predicted", "Truth")
+
+kable(knn_table, escape = FALSE) %>%
+  column_spec (1, border_left = T) %>%
+  column_spec (14, border_right = T) %>%
+  kable_styling(position = "center", latex_options = "HOLD_position")
+```
+
+7. Using the above table, predict the class for each point using the three nearest neighbors using a probability threshold of 0.5.  
+
+## Confusion Matrix Practice
+
+8. Now, fill in the confusion matrix below. 
+
+```{=tex}
+\begin{tabular}{|c|c|c|c|} \cline{3-4}
+ \multicolumn{2}{c|}{} & \multicolumn{2}{c|}{Truth}  \\ \cline{3-4}
+ \multicolumn{2}{c|}{} & Class 1 & Class 2 \\  \hline
+ \multirow{6}{*}{\rotatebox[origin=c]{90}{Predicted}} & & & \\
+ & Class 1 &  &  \\   
+ & & & \\ \cline{2-4}
+ & & & \\
+ & Class 2 & & \\
+ & & & \\ \hline
+\end{tabular}
+```
+
+```{=tex}
+\begin{tabular}{|c|c|c|c|} \cline{3-4}
+ \multicolumn{2}{c|}{} & \multicolumn{2}{c|}{Truth}  \\ \cline{3-4}
+ \multicolumn{2}{c|}{} & Class 1 & Class 2 \\  \hline
+ \multirow{6}{*}{\rotatebox[origin=c]{90}{Predicted}} & & & \\
+ & Class 1 & 2 & 2 \\   
+ & & & \\ \cline{2-4}
+ & & & \\
+ & Class 2 & 4 & 5 \\
+ & & & \\ \hline
+\end{tabular}
+```
+
+9. Based off of your confusion matrix, what is the training set accuracy of the classifier?
+
+\begin{align*}
+\color{blue}{Accuracy} & \color{blue}{ = \frac{TP + TN}{n}} \\
+& \color{blue}{ = \frac{5 + 2}{13}} \\
+\end{align*}
+
+10. Based off of your confusion matrix, what is the training set sensitivity of the classifier?
+
+\begin{align*}
+\color{blue}{Sensitivity} & \color{blue}{ = \frac{TP + FN}{n}} \\
+& \color{blue}{ = \frac{5 + 2}{13}} \\
+\end{align*}
+
+11. Would increasing the number of neighbors to 5 affect the training set accuracy of the classifier? How do you know?
+
+\textcolor{blue}{Increasing the number of neighbors to 5 would increase the training set accuracy. For example, consider points H, J, and M--all three are incorrectly classified with $k = 3$, but would be correctly classified with $k = 5$. Furthermore, none of the points would be incorrectly classified with $k = 5$, so we know the overall accuracy would be increased.}
+
+\section*{Implementing $k$NN}
+
+## Exploring $k$NN Functions in `sklearn` and `pandas`
+
+12. Recall that in Homeworks 3 and 4 we were interested in predicting `low` from `age`, `lwt`, `smoke`, `ptl`, `ht`, `ui`, `ftv`, and `race` (but not `bwt`, since that will predict `low` perfectly). First, read the documentation for [$k$NN Classification](https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html) and [$k$NN Regression](https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsRegressor.html). For predicting `low`, which is the most appropriate method to use? Split the data into `X` and `Y` dataframes to use later, and go ahead and scale the `X` data, storing it as `X_pp`, for use in our $k$NN model.
+ 
+```{python}
+X = birthwt[['age', 'lwt', 'smoke', 'ptl', 'ht', 'ui', 'ftv', 'race_2', 'race_3']]
+Y = birthwt['low']
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+scaler.fit(X)
+
+X_pp = pd.DataFrame(scaler.transform(X), columns = [['age', 'lwt', 'smoke', 'ptl', 
+                                                     'ht', 'ui', 'ftv', 'race_2',                                                            'race_3']])
+```
+
+`low` \textcolor{blue}{is a binary response, so it is more appropriate to use classification rather than regression.}
+
+13. Using the correct command from Step 1., write a line of code that specifies the number of neighbors in your classifier or regressor as $k = 5$. No need to fit anything yet, but name the model `knn5`. 
+
+```{python modelspec}
+knn5 = sklearn.neighbors.KNeighborsClassifier(n_neighbors = 5)
+```
+
+14. Now, fit your classifier or regressor from Step 2. with `X_pp` and `Y` from Step 1. 
+
+```{python modelfit}
+knn5_fit = knn5.fit(X_pp, Y)
+```
+
+15. Next, apply `.predict()` to get the predictions from the model in Step 3 (name them `knn5_preds` to use for later).
+
+```{python modelpreds}
+knn5_preds = knn5_fit.predict(X_pp)
+```
+
+16. Now, use `pd.crosstabs()` to calculate a confusion matrix for this model. What are the accuracy, sensitivity, and specificity?
+
+```{python CM}
+cm = pd.crosstab(knn5_preds.tolist(), birthwt['low'])
+
+(cm[0][0] + cm[1][1])/birthwt.shape[0] ## Accuracy
+cm[1][1]/(cm[1][0] + cm[1][1]) ## Sensitivity
+cm[0][0]/(cm[0][0] + cm[0][1]) ## Specificity
+```
+
+17. Note that when you calculated the predictions, you were returned an array of 0's and 1's corresponding to a non-low birthweight and a low birthweight, respectively. This is not what we are used to--with the results of a logistic regression, for example, we see probabilities. To get probabilities out of a $k$NN model, use `.predict_proba()` and save the new predictions as `knn5_preds_proba`. What kind of results do you see?
+
+```{python modelprobs}
+knn5_preds_proba = knn5_fit.predict_proba(X_pp)
+knn5_preds_proba.shape
+#knn5_preds_proba
+```
+
+\textcolor{blue}{Here, we are given an array--there are a few things going on inside.}
+
+\textcolor{blue}{First, we note that the array has two columns. This is because there is one column representing the probability of a non-low birthweight (the first column, or the column indexed with zero) and one column representing the probability of a low birthweight (the second column, or the column indexed with a 1). As a self-check, look at a few of the rows in the array--they add up to one, as two complementary probabilities should. }
+
+\textcolor{blue}{Second, note that there are only a few values in the array--specifically, 0, 0.2, 0.4, 0.6, 0.8, and 1. This is because we are looking at the five nearest neighbors of any given point! So  0, 0.2, 0.4, 0.6, 0.8, and 1 are the only possible values to see. }
+
+18. Extract the second column of `knn5_preds_proba` to use as the predicted probabilities. Use that column, along with the column for the response variable, to calculate a ROC curve and value for AUC. Is this model a good model?
+
+```{python auc}
+from sklearn.metrics import (confusion_matrix, accuracy_score)
+from sklearn import metrics
+
+fpr, tpr, thresholds = metrics.roc_curve(birthwt['low'], knn5_preds_proba[:,1],
+                                           pos_label=1)
+print(metrics.auc(fpr, tpr))
+```
+
+\textcolor{blue}{This is pretty far above 0.5, and should be bigger than most of the values you have seen previously--I am pretty happy with it!}
+
+## Choosing $k$
+
+19. Let's move on to choosing the best value of $k$ for this data. Remember that we typically do so by using cross-validation, or at least using some model selection statistic on a test set. Let's proceed with taking a 70/30 split of our data using the `train_test_split()` function from `sklearn`. Don't forget that you will need `X_train`, `X_test`, `Y_train`, and `Y_test`. If you want EXACTLY the same results as I have, use `random_state = 533`.
+
+```{python traintest}
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.3, 
+                                                    random_state = 1033)
+```
+
+20. Remember that we need to scale the data as well--if we used the scaled data from before, it would be scaled using statistics from all of the data, not just the training data. Go ahead and rescale `X_train` and `X_test` with the summary statistics from the training data so that they both have column means all equal to 0 and column standard deviations all equal to 1. 
+
+```{python traintestscale}
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+X_train_pp = pd.DataFrame(scaler.transform(X_train), columns = [['age', 'lwt', 'smoke', 
+                                                           'ptl', 'ht', 'ui', 
+                                                           'ftv', 'race_2', 'race_3']])
+                                                          
+X_test_pp = pd.DataFrame(scaler.transform(X_test), columns = [['age', 'lwt', 'smoke', 
+                                                            'ptl', 'ht', 'ui', 
+                                                            'ftv', 'race_2', 'race_3']])
+```
+
+21. Now, we need to write a loop again. The loop needs to search over a range of $k$ (I used 1 to 30), and in each iteration, fit a $k$NN model using the training set with the new value of $k$, predict the classes of the test set, and summarize the performance of the model using some appropriate value. Think back to your response to Step 1.--what are some appropriate model selection statistics that you can use for the type of response you chose?
+
+\textcolor{blue}{We are still using a classifier for binary outputs, so things like accuracy, sensitivity, specificity, and AUC would all be appropriate.}
+
+22. For simplicity, let's use accuracy. Fill in the loop below, storing the results from the test set in `metric`. You may want to use your code from Steps 3, 4, and 5. 
+
+```{python loop1}
+metric = []
+
+for k in range(1, 21):
+  tempknn = sklearn.neighbors.KNeighborsRegressor(n_neighbors = k).fit(X_train_pp,
+                                                                       y_train)
+  tempknn_preds = tempknn.predict(X_test_pp) > 0.5 
+  tempknn_cm = pd.crosstab(tempknn_preds.tolist(), y_test)
+  metric.append((tempknn_cm[0][0] + tempknn_cm[1][1])/X_test.shape[0])
+```  
+
+23. Which value of $k$ results in the highest test set accuracy?
+
+```{python choosek}
+['%.3f' % elem for elem in metric[0:9]]
+['%.3f' % elem for elem in metric[10:19]]
+
+k = metric.index(max(metric)) + 1
+print(k)
+```
+
+\textcolor{blue}{So, the maximum test set accuracy occurs at $k = 5$ (don't forget about the zero indexing!)}
+
+24. Now, run the code below to create a plot showing the relationship between $k$ and test set accuracy. How would you describe this relationship? See if you can add a vertical line representing the best value of $k$. 
+
+```{python plotk}
+d_kNN = {'k': range(1, 21), 'Metric': metric}
+kNN_plot = pd.DataFrame(data = d_kNN)  
+
+print(p9.ggplot(kNN_plot, p9.aes(x = 'k', y = 'Metric')) +
+       p9.geom_line() +
+       p9.geom_vline(xintercept = k) + 
+       p9.scale_x_continuous(name = "$k$") + 
+       p9.scale_y_continuous(name = "Test Set Accuracy") +
+       p9.theme(legend_position = "none", figure_size = [6, 3.25]))
+```
