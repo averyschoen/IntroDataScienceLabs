@@ -1,0 +1,417 @@
+---
+title: "Tutorial"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+knitr::knit_engines$set(python = reticulate::eng_python)
+library(learnr)
+library(gradethis)
+library(reticulate)
+use_virtualenv("~/Desktop/IntroDataScienceLabs/my_env")
+
+
+custom_checker <- function(label, user_code, solution_code, envir_result, evaluate_result, last_value, stage, ...) {
+  if (stage == "code_check") {
+      if (user_code==solution_code){
+          return(list(message = "Exact match code!", correct = TRUE))
+      }
+    return(list(message = "Not exact match code", correct = FALSE))
+  }
+}
+
+gradethis_setup()
+tutorial_options(exercise.completion = FALSE, exercise.checker = custom_checker)
+```
+
+## Goals
+
+-   Address failed assumptions in multiple linear regression.
+-   Explore datasets with multiple variables for the purpose of multiple linear regression.
+-   Find significant predictors for a response variable in multiple linear regression.
+-   Learn to incorporate categorical variables in multiple linear regression.
+
+## Setup
+
+For this lab we will be using `plotnine`, `pandas`, `numpy`, `statsmodels`, and `AirBnB_prices.csv`. Refresh yourself on the variables the dataset includes by reading the [Kaggle documentation](https://www.kaggle.com/datasets/thedevastator/airbnb-prices-in-european-cities). Run the cell below to setup our environment.
+
+```{python setup1, exercise=TRUE, exercise.eval = FALSE, message = FALSE}
+import numpy as np
+import pandas as pd
+import plotnine as p9
+import statsmodels.api as sm
+
+AirBnB_prices = pd.read_csv("data/AirBnB_prices.csv")
+```
+
+## Linear Regression
+
+1.  Refit a simple linear regression model predicting `realSum` from `dist`, and make a note of the $r^2$ (which can be found in the `.summary()` output.
+
+```{python slr, exercise = TRUE, message = FALSE, exercise.setup="setup1"}
+X1 = AirBnB_prices[...]
+X1 = sm.add_constant(X1)
+
+Y = AirBnB_prices[...]
+
+model1 = sm.OLS(Y, X1).fit()
+model1.summary()
+
+```
+
+```{python slr-solution, message = FALSE, warning = FALSE, echo = FALSE}
+X1 = AirBnB_prices["dist"]
+X1 = sm.add_constant(X1)
+
+Y = AirBnB_prices["realSum"]
+
+model1 = sm.OLS(Y, X1).fit()
+model1.summary()
+```
+
+```{r slr-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+\n
+2. Run the cell to view the diagnostic plots (a scatterplot of residuals against the predicted values, and a histogram of the residuals)
+
+```{python setup2, exercise=FALSE, echo=FALSE, exercise.setup="setup1"}
+X1 = AirBnB_prices["dist"]
+X1 = sm.add_constant(X1)
+
+Y = AirBnB_prices["realSum"]
+
+model1 = sm.OLS(Y, X1).fit()
+model1.summary()
+```
+
+```{python dp, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup2"}
+
+model1_df = model1.fittedvalues.to_frame(name = 'Fitted')
+model1_df['Residuals'] = model1.resid
+
+(p9.ggplot(model1_df, p9.aes(x = 'Fitted', y = 'Residuals')) +
+ p9.geom_point() +
+ p9.xlab("Predicted Price") +
+ p9.ylab("Residuals") + 
+ p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+             
+(p9.ggplot(model1_df, p9.aes(x = 'Residuals')) +
+   p9.geom_histogram(bins = 230) +
+   p9.xlab("Residuals") + 
+   p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+```
+
+```{r q2, echo=FALSE}
+question("Describe the distribution of the residuals",
+         answer("Symetric"),
+         answer("Right skewed", correct=TRUE, message="The linear regression assumption of symmetric residuals is violated"),
+         answer("Left skewed"))
+```
+
+3.  Sometimes when the response variable is particularly skewed, we can easily address failed assumptions by applying a mathematical transformation to the different variables. You may remember from Homework 2 that the price per night of the AirBnBs has a few extreme values--specifically, an \euro 18,54545 per night one bedroom home in Athens. Apply the log (base $e$) transformation to `realSum`, and save the transformed values as a new column in your dataframe (name it `logRealSum`). Plot the distribution of the transformed variable and re-examine the histogram.
+
+```{python log, exercise = TRUE, message = FALSE, exercise.setup="setup2"}
+AirBnB_prices['logRealSum'] = np.log( ... )
+
+(p9.ggplot(AirBnB_prices, p9.aes(x = ... )) +
+  p9.geom_histogram(bins = 230) +
+  p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+
+```
+
+```{python log-solution, message = FALSE, warning = FALSE, echo = FALSE}
+AirBnB_prices['logRealSum'] = np.log(AirBnB_prices['realSum'])
+
+(p9.ggplot(AirBnB_prices, p9.aes(x = 'logRealSum')) +
+  p9.geom_histogram(bins = 230) +
+  p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+```
+
+```{r log-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+This distribution is far less skewed! The center and spread have also changed since we are working on a new scale, but is the shape that we are primarily concerned with. There are still a handful of extreme values, but nothing quite as bad as before
+
+4.  Now, run this cell that fits a new model predicting `logRealSum` from `dist`. Make a note of the $r^2$. Examine the diagnostic plots from the new model.
+
+```{python setup3, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup2"}
+X2 = AirBnB_prices["dist"]
+Y2 = AirBnB_prices["logRealSum"]
+
+model2 = sm.OLS(Y2, X2).fit()
+model2.summary()
+
+model2_df = model2.fittedvalues.to_frame(name = 'Fitted')
+model2_df['Residuals'] = model2.resid
+
+(p9.ggplot(model2_df, p9.aes(x = 'Fitted', y = 'Residuals')) +
+ p9.geom_point() +
+ p9.xlab("Predicted Price") +
+ p9.ylab("Residuals") +
+ p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+ 
+(p9.ggplot(model2_df, p9.aes(x = 'Residuals')) +
+   p9.geom_histogram(bins = 230) +
+   p9.xlab("Residuals") + 
+   p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+
+```
+
+```{r q4, echo=FALSE}
+question("T/F a linear model is appropriate for these two variables",
+         answer("True", correct=TRUE),
+         answer("False"))
+```
+
+The $r^2$ is now 0.7%--slightly higher but still not very good. The residuals still look wedge-shaped, although slightly less so. The biggest change is in the residuals, which are still not entirely symmetric but are much closer to meeting the assumption.
+
+
+Transforming the response variable is one common technique for addressing violated assumptions in linear regression. The log transform is probably the most frequently used, but you can also try logs with different bases, the square root or other exponents, the inverse, or double log, among others!
+
+5.  The $r^2$ for both models is fairly low, so we already have some idea of whether `dist` is a helpful predictor. Let's practice formally finding significant features in the model.
+
+```{r q5, echo=FALSE}
+question("Given $H_0: \beta_{dist} = 0$ what is an appropriate alternative hypothesis?",
+         answer("$H_A: \beta_{dist} > 0$"),
+         answer("$H_A: \beta_{dist} \neq 0$", correct=TRUE),
+         answer("$H_A: \beta_{dist} < 0$"))
+```
+
+6.  Recall the summary output from model2
+
+```{python m2, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup3"}
+model2.summary()
+```
+
+```{r q6, echo=FALSE}
+question("Would you reject or fail to reject a formal hypothesis test investigating whether or not the coefficient is zero?",
+         answer("Reject", correct=TRUE, message="Conclusion of this test: There is evidence that distance is a significant predictor of log nightly AirBnB price in European cities."),
+         answer("Fail to reject"))
+```
+
+## Multiple Linear Regression
+
+9.  `dist` may be significant, but as we can see from the adjusted $r$-squared, it doesn't predict `logRealSum` very well. Let's try adding more variables! First, run this cell to take a look at `AirBnB_prices`.
+
+```{python col, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup3"}
+AirBnB_prices.describe()
+```
+
+```{r q9, echo=FALSE}
+question("Some variables are likely collinear--can you identify any pairs that might give you trouble later on? (select ALL that apply)",
+         answer("`attr_index` and `attr_index_norm`", correct=TRUE),
+         answer("`rest_index` and `rest_index_norm`", correct=TRUE),
+         answer("`room_type` and `room_shared` and `room_private`", correct=TRUE))
+```
+
+To confirm assumptions, calculate the correlation matrix for the numeric variables (ignore indicators for now).
+
+```{python cormat, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup3"}
+AirBnB_prices[['logRealSum', 'person_capacity', 'cleanliness_rating', 'guest_satisfaction_overall','bedrooms', 'dist', 'metro_dist', 'attr_index', 'attr_index_norm', 'rest_index','rest_index_norm', 'lng', 'lat']].corr()
+```
+
+10. Review the [Kaggle documentation](https://www.kaggle.com/datasets/thedevastator/airbnb-prices-in-european-cities)
+
+```{r q10, echo=FALSE}
+question("Which variables are categorical (regardless of how they have been stored)?",
+         answer("`realSum`"),
+         answer("`room_type`", correct=TRUE),
+         answer("`room_shared`", correct=TRUE),
+         answer("`room_private`", correct=TRUE),
+         answer("`person_capacity`"),
+         answer("`host_is_superhost`", correct=TRUE),
+         answer("`multi`", correct=TRUE),
+         answer("`biz`", correct=TRUE),
+         answer("`cleanliness_rating`"),
+         answer("`guest_satisfaction_overall`"),
+         answer("`bedrooms`"),
+         answer("`dist`"),
+         answer("`metro_dist`"),
+         answer("`attr_index"),
+         answer("`attr_index_norm`"),
+         answer("`rest_index`"),
+         answer("`rest_index_norm`"),
+         answer("`lng`"),
+         answer("`lat`"),
+         answer("`city`", correct=TRUE),
+         answer("`dayTypes`", correct=TRUE))
+```
+
+11. `multi` and `biz` are already stored as 0's and 1's. `room_type`, `room_shared`, `room_private`, `host_is_superhost`, `city`, and `dayType` are not and need to be converted to dummy variables. Let's use the methods from `pandas` since we already have it installed. The specific function is `get_dummies()`.
+
+```{python dummy, exercise = TRUE, message = FALSE, exercise.setup="setup3"}
+pd.get_dummies(AirBnB_prices, columns = [...])
+```
+
+```{python dummy-solution, message = FALSE, warning = FALSE, echo = FALSE}
+pd.get_dummies(AirBnB_prices, columns = ['room_type', 'room_shared', 'room_private', 'host_is_superhost', 'city', 'dayType'])
+```
+
+```{r dummy-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+12. `room_type` was perhaps a bad example--if you look closely, you should see that there are already dummy variables for `room_type`: `room_shared` and `room_private`. WARNING! If you put two columns that have identical information into a linear regression model, the math will not work. Be careful when examining the documentation to see that you do not put shared information into your model.
+
+Aside from the issues with `room_type`, we can see that there is still a problem--all of the dummies are recorded as Booleans, a.k.a, `True` and `False`. To convert to numbers rather than Booleans, look online at the syntax and fill in the correct dtype:
+
+```{python dummy1, exercise = TRUE, message = FALSE, exercise.setup="setup3"}
+pd.get_dummies(AirBnB_prices, columns = ['room_type', 'room_shared', 'room_private', 'host_is_superhost', 'city', 'dayType'], dtype = ...)
+```
+
+```{python dummy1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+pd.get_dummies(AirBnB_prices, columns = ['room_type', 'room_shared', 'room_private', 'host_is_superhost', 'city', 'dayType'], dtype = float)
+```
+
+```{r dummy1-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+13. We want to avoid the multicollinearity issues incurred when converting to dummy variables, we need to add another argument. The `drop_first` argument will convert everything to dummy variables, and then drop the very first column, avoiding any multicollinearity issues. Edit the code to use the `drop_first` argument.
+
+```{python dummy2, exercise = TRUE, message = FALSE, exercise.setup="setup3"}
+pd.get_dummies(AirBnB_prices, columns = ['room_type', 'room_shared', 'room_private', 'host_is_superhost', 'city', 'dayType'], dtype = float, ...)
+```
+
+```{python dummy2-solution, message = FALSE, warning = FALSE, echo = FALSE}
+pd.get_dummies(AirBnB_prices, columns = ['room_type', 'room_shared', 'room_private', 'host_is_superhost', 'city', 'dayType'], dtype = float, drop_first=True)
+```
+
+```{r dummy2-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+Run this cell to save the converted dataframe for later use.
+
+```{python setup4, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup3"}
+AirBnB_prices = pd.get_dummies(AirBnB_prices, columns = ['room_type', 'room_shared', 'room_private', 'host_is_superhost', 'city', 'dayType'], dtype = float, drop_first = True)
+```
+
+14. Now let's try multiple linear regression. Fit a model predicting `realSum` with one of each variable--be careful to use only one set of the `attr` and `rest` variables.
+
+```{python setup5, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup4"}
+X3 = AirBnB_prices[['room_shared_True', 'room_private_True', 'person_capacity', 'host_is_superhost_True', 'multi', 'biz', 'cleanliness_rating', 'guest_satisfaction_overall', 'bedrooms', 'dist', 'metro_dist', 'attr_index', 'rest_index', 'lat', 'lng', 'city_athens', 'city_barcelona', 'city_berlin', 'city_budapest', 'city_lisbon', 'city_london', 'city_paris', 'city_rome', 'city_vienna', 'dayType_weekends']]
+X3 = sm.add_constant(X3)
+
+model3 = sm.OLS(Y, X3).fit()
+model3.summary()
+
+```
+
+```{r q14, echo=FALSE}
+question("What is the adjusted $r^2$?",
+         answer("0.236"),
+         answer("0.235", correct=TRUE),
+         answer("637.2")
+         answer("0.0"))
+```
+
+15. Run this cell to look at the diagnostic plots of this model.
+```{python diagplots, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup5"}
+model3_df = model3.fittedvalues.to_frame(name = 'Fitted')
+model3_df['Residuals'] = model3.resid
+
+(p9.ggplot(model3_df, p9.aes(x = 'Fitted', y = 'Residuals')) +
+ p9.geom_point() +
+ p9.xlab("Predicted Price") +
+ p9.ylab("Residuals") + 
+   p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+   
+(p9.ggplot(model3_df, p9.aes(x = 'Residuals')) +
+   p9.geom_histogram(bins = 230) +
+   p9.xlab("Residuals") + 
+   p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+```
+
+```{r q15, echo=FALSE}
+question("T/F The linear model is appropriate",
+         answer("True"),
+         answer("False", correct=TRUE))
+```
+
+16. Don't forget that that the transformed response had much better diagnostic plots for the simple linear regression! Run the cell below to predict `logRealSum`. 
+
+```{python setup6, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup5"}
+model4 = sm.OLS(Y2, X3).fit()
+model4.summary()
+```
+
+```{r q16, echo=FALSE}
+question("What is the adjusted $r^2$?",
+         answer("xx"),
+         answer("0.66", correct=TRUE),
+         answer("xx"),
+         answer("xx")
+```
+
+17. Redo the diagnostic plots.
+```{python setup7, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup6"}
+model4_df = model4.fittedvalues.to_frame(name = 'Fitted')
+model4_df['Residuals'] = model4.resid
+
+(p9.ggplot(model4_df, p9.aes(x = 'Fitted', y = 'Residuals')) +
+ p9.geom_point() +
+ p9.xlab("Predicted Price") +
+ p9.ylab("Residuals") + 
+   p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+   
+(p9.ggplot(model4_df, p9.aes(x = 'Residuals')) +
+   p9.geom_histogram(bins = 230) +
+   p9.xlab("Residuals") + 
+   p9.theme(legend_position = "none", figure_size = [6.5, 3.25]))
+```
+
+```{r q17, echo=FALSE}
+question("T/F The linear model is appropriate",
+         answer("True", correct=TRUE),
+         answer("False"))
+```
+
+18. Note that in the summary there was a warning about a large condition number. This warning has to do with multicollinearity, and tells us that we need to eliminate some of the variables.
+
+We can check the VIF with the [VIF function from the statsmodels](https://www.geeksforgeeks.org/detecting-multicollinearity-with-vif-python/). View the following code chunk for an example.
+
+
+```{python setup8, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup7"}
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+  
+vif_data = pd.DataFrame()
+vif_data["feature"] = X3.columns
+  
+vif_data["VIF"] = [variance_inflation_factor(X3.values, i)
+                          for i in range(len(X3.columns))]
+  
+print(vif_data)
+```
+
+I don't think it's surprising that all of the city variables and the latitute and longitude have multicollinearity issues--these variables are different ways of conveying the same information.
+
+Run the cell to see how removing lat/long columns impact VIF and the mdoel.
+
+```{python setup9, exercise=TRUE, exercise.eval = FALSE, message = FALSE, exercise.setup="setup8"}
+X_nolatlong = AirBnB_prices[['room_shared_True', 'room_private_True', 'person_capacity',
+                             'host_is_superhost_True', 'multi', 'biz', 
+                             'cleanliness_rating', 'guest_satisfaction_overall', 
+                             'bedrooms', 'dist', 'metro_dist', 'attr_index', 
+                             'rest_index', 'city_athens', 'city_barcelona', 
+                             'city_berlin', 'city_budapest', 'city_lisbon', 
+                             'city_london', 'city_paris', 'city_rome', 'city_vienna', 
+                             'dayType_weekends']]
+X_nolatlong = sm.add_constant(X_nolatlong)
+
+model_nolatlong = sm.OLS(Y2, X_nolatlong).fit()
+model_nolatlong.summary()
+
+vif_nolatlong = pd.DataFrame()
+vif_nolatlong["feature"] = X_nolatlong.columns
+  
+vif_nolatlong["VIF"] = [variance_inflation_factor(X_nolatlong.values, i)
+                          for i in range(len(X_nolatlong.columns))]
+  
+print(vif_nolatlong)
+```
