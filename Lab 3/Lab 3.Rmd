@@ -307,7 +307,7 @@ model3.summary()
 question("What is the adjusted $r^2$?",
          answer("0.236"),
          answer("0.235", correct=TRUE),
-         answer("637.2")
+         answer("637.2"),
          answer("0.0"))
 ```
 
@@ -346,7 +346,7 @@ question("What is the adjusted $r^2$?",
          answer("xx"),
          answer("0.66", correct=TRUE),
          answer("xx"),
-         answer("xx")
+         answer("xx"))
 ```
 
 17. Redo the diagnostic plots.
