@@ -1,0 +1,562 @@
+---
+title: "Tutorial"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+knitr::knit_engines$set(python = reticulate::eng_python)
+library(learnr)
+library(gradethis)
+library(reticulate)
+use_virtualenv("~/Desktop/IntroDataScienceLabs/my_env")
+
+
+custom_checker <- function(label, user_code, solution_code, envir_result, evaluate_result, last_value, stage, ...) {
+  if (stage == "code_check") {
+      if (user_code==solution_code){
+          return(list(message = "Exact match code!", correct = TRUE))
+      }
+    return(list(message = "Not exact match code", correct = FALSE))
+  }
+}
+
+gradethis_setup()
+tutorial_options(exercise.completion = FALSE, exercise.checker = custom_checker)
+```
+
+## Goals
+
+-   To continue practicing with logistic regression models.
+-   To calculate model fit statistics.
+-   To calculate confusion matrices.
+-   To apply LASSO to datasets used for linear and logistic regression.
+
+## Setup
+
+For this lab we will be using `plotnine`, `pandas`, `numpy`, `statsmodels`,`random`, `scikit-learn`, and the dataset `arrests`. [Review the documentation here.](https://vincentarelbundock.github.io/Rdatasets/doc/carData/Arrests.html) Run the cell below to setup our environment. 
+
+```{python setup1, exercise=TRUE, exercise.eval = FALSE, message = FALSE}
+import numpy as np
+import pandas as pd
+import plotnine as p9
+import statsmodels.api as sm
+import random
+import sklearn
+
+arrests = pd.read_csv("data/Arrests.csv")
+```
+
+## Exploratory Data Analysis
+
+1. Use `.head()` to look over the data in `arrests`
+
+```{python des, exercise = TRUE, message = FALSE, exercise.setup="setup1"}
+
+```
+
+```{python des-solution, message = FALSE, warning = FALSE, echo = FALSE}
+arrests.head()
+```
+
+```{r des-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+2. Notice that there are a few categorical variables, convert them to dummies by using `pd.get_dummies()`. Choose the correct datatype to allow for regression.
+
+```{python dum, exercise = TRUE, message = FALSE, exercise.setup="setup1"}
+arrests = pd.get_dummies(arrests, columns = ..., dtype=...)
+```
+
+```{python dum-solution, message = FALSE, warning = FALSE, echo = FALSE}
+arrests = pd.get_dummies(arrests, columns = ['released', 'race', 'sex', 'employed', 'citizen'], dtype=float)
+```
+
+```{r dum-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+3. Now that you have familiarized yourself with the data, split the data into a 70% training set and a 30% training set using the `sample` function from the `random` module, and the `.drop()` and `.loc` methods. Note that when you randomly split, you will get a different dataset each time--this will lead to consistent, but different, results. If you want to have the same results every time, you can set a random seed first--use the `.seed()` method from the `random` package.
+
+```{python setup2, exercise = FALSE, message = FALSE, echo=FALSE, exercise.setup="setup1"}
+arrests = pd.get_dummies(arrests, columns = ['released', 'race', 'sex', 'employed', 'citizen'], dtype=float)
+```
+
+```{python split, exercise = TRUE, message = FALSE, exercise.setup="setup2"}
+random.seed(651)
+
+ind = random.sample(range(arrests.shape[0]-1), round(0.7*arrests.shape[0]))
+
+arrests_test = arrests.drop(...)
+arrests_train = arrests.loc[...]
+```
+
+```{python split-solution, message = FALSE, warning = FALSE, echo = FALSE}
+random.seed(651)
+
+ind = random.sample(range(arrests.shape[0]-1), round(0.7*arrests.shape[0]))
+
+arrests_test = arrests.drop(ind)
+arrests_train = arrests.loc[ind]
+```
+
+```{r split-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+
+## Model Fit Statistics
+
+4. Now, using your training set, fit a logistic regression model predicting whether an individual is released with a summons using the statsmodel syntax. Use any (or all) of the variables you like.
+
+```{python setup3, exercise = FALSE, message = FALSE, echo=FALSE, exercise.setup="setup2"}
+random.seed(651)
+
+ind = random.sample(range(arrests.shape[0]-1), round(0.7*arrests.shape[0]))
+
+arrests_test = arrests.drop(ind)
+arrests_train = arrests.loc[ind]
+```
+
+```{python mod1, exercise = TRUE, message = FALSE, exercise.setup="setup3"}
+X_train = arrests_train[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_train = sm.add_constant(X_train)
+
+Y_train = arrests_train['released_Yes']
+
+model1 = sm.Logit(...).fit()
+```
+
+```{python mod1-solution, message = FALSE, warning = FALSE, echo = FALSE}
+X_train = arrests_train[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_train = sm.add_constant(X_train)
+
+Y_train = arrests_train['released_Yes']
+
+model1 = sm.Logit(Y_train, X_train).fit()
+```
+
+```{r mod1-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+
+5. Print out the summary output of the model.
+
+```{python setup4, exercise = FALSE, message = FALSE, echo=FALSE, exercise.setup="setup3"}
+X_train = arrests_train[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_train = sm.add_constant(X_train)
+
+Y_train = arrests_train['released_Yes']
+
+model1 = sm.Logit(Y_train, X_train).fit()
+```
+
+```{python sum, exercise = TRUE, message = FALSE, exercise.setup="setup4"}
+
+```
+
+```{python sum-solution, message = FALSE, warning = FALSE, echo = FALSE}
+model1.summary()
+```
+
+```{r sum-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+6. Last week we saw that sometimes we don't need all of the printed output, and sometimes we would like to find specific values. First, we need to identify what is included in the model fitting process. Apply the `dir()` function to your model to see what is included. Scan the terms and print the `aic` and `bic`. 
+
+```{python dir, exercise = TRUE, message = FALSE, exercise.setup="setup4"}
+...
+
+print("AIC: ", ...)
+print("BIC: ", ...)
+```
+
+```{python dir-solution, message = FALSE, warning = FALSE, echo = FALSE}
+dir(model1)
+
+print("AIC: ", model1.aic)
+print("BIC: ", model1.bic)
+```
+
+```{r dir-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+7. Another common method for evaluating logistic regression models is the confusion matrix. Use `pred_table()` to print it out.
+
+```{python mat, exercise = TRUE, message = FALSE, exercise.setup="setup4"}
+
+```
+
+```{python mat-solution, message = FALSE, warning = FALSE, echo = FALSE}
+model1.pred_table()
+```
+
+```{r mat-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+8. Be careful when using `pred_table`! In this method, the rows indicate the truth and the columns indicate the predictions, which is "flipped" from what I presented in class. Read the [pred_table documentation](https://www.statsmodels.org/dev/generated/statsmodels.discrete.discrete_model.LogitResults.pred_table.html) to confirm. Then, calculate the accuracy, true positive rate, true negative rate, positive predictive value, and negative predictive value.
+
+```{python tab, exercise = TRUE, message = FALSE, exercise.setup="setup4"}
+cm1 = model1.pred_table()
+
+## Accuracy
+...
+
+## TPR
+...
+  
+## TNR
+...
+
+## PPV
+...
+  
+## NPV
+...
+```
+
+```{python tab-solution, message = FALSE, warning = FALSE, echo = FALSE}
+cm1 = model1.pred_table()
+
+## Accuracy
+(cm1[0][0] + cm1[1][1])/cm1.sum()
+
+## TPR
+cm1[1][1]/(cm1[1][0] + cm1[1][1])
+  
+## TNR
+cm1[0][0]/(cm1[0][0] + cm1[0][1])
+
+## PPV
+cm1[1][1]/(cm1[0][1] + cm1[1][1])
+  
+## NPV
+cm1[0][0]/(cm1[0][0] + cm1[1][0])
+```
+
+```{r tab-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+9. Remember that we might want a baseline accuracy to compare with the new accuracy. Calculate the baseline accuracy for this dataset.
+
+```{python bs, exercise = TRUE, message = FALSE, exercise.setup="setup4"}
+
+```
+
+```{python bs-solution, message = FALSE, warning = FALSE, echo = FALSE}
+sum(Y_train == 1)/len(Y_train)
+```
+
+```{r bs-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+10. Use the `.predict()` method to predict the outcome for the test set. Save the list to use for later.
+
+```{python pred, exercise = TRUE, message = FALSE, exercise.setup="setup4"}
+X_test = arrests_test[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_test = sm.add_constant(X_test)
+
+Y_test = arrests_test['released_Yes']
+
+preds1 = ...
+```
+
+```{python pred-solution, message = FALSE, warning = FALSE, echo = FALSE}
+X_test = arrests_test[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_test = sm.add_constant(X_test)
+
+Y_test = arrests_test['released_Yes']
+
+preds1 = model1.predict(X_test)
+```
+
+```{r pred-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+11. Let's investigate an alternative method for finding the confusion matrix. You can use the `pd.crosstab()` function--the benefit of this function is that you have more control over what is in the rows and what is in the columns. See if you can use it to find the confusion matrix and accuracy metrics using a threshold of 0.5.
+
+```{python setup5, exercise = FALSE, message = FALSE, echo=FALSE, exercise.setup="setup4"}
+X_test = arrests_test[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_test = sm.add_constant(X_test)
+
+Y_test = arrests_test['released_Yes']
+
+preds1 = model1.predict(X_test)
+
+from sklearn import metrics, linear_model
+```
+
+```{python conf, exercise = TRUE, message = FALSE, exercise.setup="setup5"}
+
+```
+
+```{python conf-solution, message = FALSE, warning = FALSE, echo = FALSE}
+pd.crosstab(Y_test, preds1 > 0.5)
+```
+
+```{r conf-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+12. A final method that might be nice to use in reports and such is the .... method from sklearn. See the code below for evaluating the confusion matrix on the training set. Adapt the code to return the confusion matrix for the test set.
+
+```{python sk, exercise = TRUE, message = FALSE, exercise.setup="setup5"}
+sklearn.metrics.confusion_matrix(Y_train, model1.predict() > 0.5)
+sklearn.metrics.confusion_matrix(...)
+```
+
+```{python sk-solution, message = FALSE, warning = FALSE, echo = FALSE}
+sklearn.metrics.confusion_matrix(Y_train, model1.predict() > 0.5)
+sklearn.metrics.confusion_matrix(Y_test, preds1 > 0.5)
+```
+
+```{r sk-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+13. Another helpful function in `sklearn` is the AUC method. See the code below for evaluating the AUC of the training set. Can you adapt the code to return the AUC of the test set? You can read the [AUC documentation](https://www.w3schools.com/python/python_ml_auc_roc.asp) if you need it.
+
+```{python auc, exercise = TRUE, message = FALSE, exercise.setup="setup5"}
+from sklearn import metrics
+
+fpr, tpr, thresholds = metrics.roc_curve(Y_train, model1.predict(), pos_label=1)
+metrics.auc(fpr, tpr)
+
+fpr, tpr, thresholds = metrics.roc_curve(...)
+metrics.auc(...)
+```
+
+```{python auc-solution, message = FALSE, warning = FALSE, echo = FALSE}
+from sklearn import metrics
+
+fpr, tpr, thresholds = metrics.roc_curve(Y_train, model1.predict(), pos_label=1)
+metrics.auc(fpr, tpr)
+
+fpr, tpr, thresholds = metrics.roc_curve(Y_test, preds1, pos_label=1)
+metrics.auc(fpr, tpr)
+```
+
+```{r auc-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+## LASSO
+
+14. Now let's move onto fitting the LASSO. Before we do anything else, we need to standardize the data. Luckily, `sklearn` has a method for us--`StandardScaler`. We want to apply this method to the training set, while also saving it to use later for the test set. Familiarize yourself with the code below so that you know how to use these functions in the future. In case you need it, you can find the [documentation for StandardScaler here](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html).
+\n Note--because we standardize, we do not have to include a constant term! We can re-define X_train to exclude that column.
+
+```{python setup6, exercise = TRUE, message = FALSE, exercise.setup="setup5"}
+from sklearn.preprocessing import StandardScaler
+
+X_train = arrests_train[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+X_test = arrests_test[['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']]
+
+#X_train.columns
+#X_test.columns
+
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+X_train_pp = pd.DataFrame(scaler.transform(X_train), columns = [['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']])
+X_test_pp = pd.DataFrame(scaler.transform(X_test), columns = [['year', 'age', 'checks', 'race_Black', 'sex_Male', 'employed_Yes', 'citizen_Yes']])
+```
+
+15. Remember that LASSO is also used for feature selection, so it is common to fit a model with all of the variables for a wide range of threshold parameters. The most straightforward way to do this is to use the `linear_model.LogisticRegression` method from `sklearn`. Read the documentation for this function and fit a model predicting whether an individual is arrested from all of the variables (ignore the threshold parameter for now).
+
+```{python m2, exercise = TRUE, message = FALSE, exercise.setup="setup6"}
+model2 = ...
+model2.fit(..., ...)
+```
+
+```{python m2-solution, message = FALSE, warning = FALSE, echo = FALSE}
+model2 = sklearn.linear_model.LogisticRegression()
+model2.fit(X_train_pp, Y_train)
+```
+
+```{r m2-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+16. Once you read the documentation and successfully fit the model, you should find that it is relatively simple to adapt your code to fit a regularized version (a.k.a., the LASSO). Different software programs have different names for the threshold parameter--[read the documentation for logistic regression in `sklearn`](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html) to find out what it is called for `sklearn`. Adapt the code from 15 to turn this into a LASSO (just to test, use `solver = 'liblinear'` and `C = 1`)
+
+```{python m2l, exercise = TRUE, message = FALSE, exercise.setup="setup6"}
+model2 = ...
+model2.fit(..., ...)
+```
+
+```{python m2l-solution, message = FALSE, warning = FALSE, echo = FALSE}
+model3 = sklearn.linear_model.LogisticRegression(penalty='l1', solver = 'liblinear', C = 1.0)
+model3.fit(X_train_pp, Y_train)
+```
+
+```{r m2l-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+17. Remember that we need to pick the right parameter ($t$ from the lecture notes, `C` in `sklearn`). There are a variety of ways to go about this, but the most straightforward way is to write a loop fitting the model multiple times, saving the following:
+- The value of the threshold you used to fit the model,
+- The coefficients of the model,
+- The AUC (or some other model fit statistic) evaluated on the training set.
+
+\n First, create objects to store the coefficients and the AUC (we'll save the thresholds separately). I find it most helpful to use lists and dataframes.
+
+```{python obs, exercise = TRUE, message = FALSE, exercise.setup="setup6"}
+coefs_lasso = pd.DataFrame()
+auc_list = []
+```
+
+Next, select a range of "budget parameters" ($t$ from the lecture notes, `C` in `sklearn`). This will be what you iterate over in your loop and a piece that you will need if you want to graph the coefficients. I mentioned in class that this can take some trial and error--I used the range 0.00001 to 0.2 in increments of 0.001, but in the future you might have to run multiple loops to get something reasonable.
+
+\n To actually create the range, you can use `np.arange()` (must be used instead of range() for floats).
+
+```{python cs, exercise = TRUE, message = FALSE, exercise.setup="obs"}
+Cs = np.arange(0.00001, 0.2, 0.001)
+```
+
+Now, use `Cs` to create the loop. You can use the code from 13 and 16 to fill in the contents of the loops.
+
+```{python loop, exercise = TRUE, message = FALSE, exercise.setup="cs"}
+for threshold in Cs:
+  model = sklearn.linear_model.LogisticRegression(penalty='l1', solver = 'liblinear', C=...)
+  tempmodel = model.fit(..., ...)
+  coefs_lasso = pd.concat([coefs_lasso, pd.Series(tempmodel.coef_[0]).to_frame().T], ignore_index=True)
+  pred = tempmodel.predict(...)
+  fpr, tpr, thresholds = metrics.roc_curve(..., ..., pos_label=1)
+  auc_list.append(metrics.auc(..., ...))
+```
+
+```{python loop-solution, message = FALSE, warning = FALSE, echo = FALSE}
+for threshold in Cs:
+  model = sklearn.linear_model.LogisticRegression(penalty='l1', solver = 'liblinear', C=threshold)
+  tempmodel = model.fit(X_train_pp, Y_train)
+  coefs_lasso = pd.concat([coefs_lasso, pd.Series(tempmodel.coef_[0]).to_frame().T], ignore_index=True)
+  pred = tempmodel.predict(X_test_pp)
+  fpr, tpr, thresholds = metrics.roc_curve(Y_test, pred, pos_label=1)
+  auc_list.append(metrics.auc(fpr, tpr))
+```
+
+```{r loop-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+In order to create plots with plotnine we need to create a dataframe. Create a dataframe with columns for threshold and each of the coefficients in the model. Run this cell to create the dataframe.
+
+```{python setup7, message = FALSE, warning = FALSE, echo = FALSE, exercise.setup="cs"}
+for threshold in Cs:
+  model = sklearn.linear_model.LogisticRegression(penalty='l1', solver = 'liblinear', C=threshold)
+  tempmodel = model.fit(X_train_pp, Y_train)
+  coefs_lasso = pd.concat([coefs_lasso, pd.Series(tempmodel.coef_[0]).to_frame().T], ignore_index=True)
+  pred = tempmodel.predict(X_test_pp)
+  fpr, tpr, thresholds = metrics.roc_curve(Y_test, pred, pos_label=1)
+  auc_list.append(metrics.auc(fpr, tpr))
+```
+
+```{python dfplot, exercise = TRUE, message = FALSE, exercise.setup="setup7"}
+arrests_lasso_plt = coefs_lasso
+arrests_lasso_plt.rename(columns={0: 'year', 1: 'age',
+                                  2: 'checks', 3: 'race_Black',
+                                  4: 'sex_Male', 5: 'employed_Yes',
+                                  6: 'citizen_Yes'}, inplace = True)
+
+arrests_lasso_plt['Threshold'] = Cs
+
+arrests_lasso_plt.head()
+```
+
+## LASSO Plots
+
+18. Now let's work on making the plot comparing the coefficients to the threshold. You have used `geom_histogram()` and `geom_point()` before, but let's introduce a new geom, `geom_line()`. This will plot all values and connect them with a line. Fill in the shell code below to create the plot of `Threshold` and `year`.
+
+```{python line, exercise = TRUE, message = FALSE, exercise.setup="dfplot"}
+(p9.ggplot(..., p9.aes(x = ... , y = ...)) +
+  p9.geom_line())
+```
+
+```{python line-solution, message = FALSE, warning = FALSE, echo = FALSE}
+(p9.ggplot(arrests_lasso_plt, p9.aes(x = 'Threshold', y = 'year')) +
+  p9.geom_line())
+```
+
+```{r line-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+19. Hopefully, you have identified that you can only specify one x value--but we have multiple coefficients we would like to investigate! We need to make a change to the dataframe so that there are two new columns--one with all the coefficient values, and one giving the variables it belongs to. We can use `pd.melt()` to do so--familiarize yourself with the code below so that you know how to use these functions in the future. The column with all the coefficient values is now Coefficient, and the column with the variables is Variable.
+
+```{python melt, exercise = TRUE, message = FALSE, exercise.setup="dfplot"}
+arrests_lasso_plt_melt = pd.melt(arrests_lasso_plt, id_vars = 'Threshold', var_name = 'Variable', value_name = 'Coefficient')
+```
+
+adapt your plotnine code to get multiple lines on the graph using x = `Threshold` and y = `Coefficient`.
+
+```{python all, exercise = TRUE, message = FALSE, exercise.setup="melt"}
+(p9.ggplot(..., p9.aes(x = ... , y = ...)) +
+  p9.geom_line())
+```
+
+```{python all-solution, message = FALSE, warning = FALSE, echo = FALSE}
+(p9.ggplot(arrests_lasso_plt_melt, p9.aes(x = 'Threshold', y = 'Coefficient')) +
+  p9.geom_line())
+```
+
+```{r all-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+20. That does not look right! The line is connecting every single value. To fix this problem and to make it more visually appealing, we can also change the color according to the variable `Variable`. Add the attribute to the `aes()` statement.
+
+```{python color, exercise = TRUE, message = FALSE, exercise.setup="melt"}
+(p9.ggplot(..., p9.aes(x = ... , y = ..., color = ...)) +
+  p9.geom_line())
+```
+
+```{python color-solution, message = FALSE, warning = FALSE, echo = FALSE}
+(p9.ggplot(arrests_lasso_plt_melt, p9.aes(x = 'Threshold', y = 'Coefficient', color = 'Variable')) +
+  p9.geom_line())
+```
+
+```{r color-code-check, message = FALSE, warning = FALSE}
+grade_this_code()
+```
+
+## Threshold Selection
+
+21. Last, let's look at the AUC of the test set to pick our actual parameter. 
+
+```{python scratch, exercise = TRUE, message = FALSE, exercise.setup="melt"}
+
+```
+
+```{r q21, echo=FALSE}
+question("What is the maximum AUC?",
+         answer("0.3"),
+         answer("0.4"),
+         answer("0.5", correct=TRUE, message="`max(auc_list)` would tell you this"),
+         answer("0.6"))
+```
+
+22. Use this cell to locate the threshold that gives you the highest classifier.
+
+```{python scratch1, exercise = TRUE, message = FALSE, exercise.setup="melt"}
+Cs[np.argmax(auc_list)]
+```
+
+```{r q22, echo=FALSE}
+question("What terms are included in the model? You will likely need to reference the plot made in the prior module.",
+         answer("age"),
+         answer("checks", correct=TRUE),
+         answer("citizen_Yes", correct=TRUE),
+         answer("employed_Yes", correct=TRUE),
+         answer("race_Black", correct=TRUE),
+         answer("sex_Male"),
+         answer("year"))
+```
